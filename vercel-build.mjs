@@ -109,52 +109,186 @@ try {
 
   // Verificar e copiar o index.html principal para a raiz do dist
   console.log('Copiando index.html para diretório raiz do dist...');
-  if (fs.existsSync('index.html')) {
-    console.log('Copiando index.html raiz para dist/');
-    fs.copyFileSync('index.html', path.join('dist', 'index.html'));
-  } else if (fs.existsSync('dist/public/index.html')) {
-    console.log('Copiando dist/public/index.html para dist/');
-    fs.copyFileSync('dist/public/index.html', path.join('dist', 'index.html'));
-    
-    // Corrigir os caminhos dos assets no index.html
-    try {
-      console.log('Corrigindo caminhos dos assets no index.html...');
-      let indexHTML = fs.readFileSync(path.join('dist', 'index.html'), 'utf8');
-      indexHTML = indexHTML.replace(/src="\/assets\//g, 'src="/public/assets/');
-      indexHTML = indexHTML.replace(/href="\/assets\//g, 'href="/public/assets/');
-      fs.writeFileSync(path.join('dist', 'index.html'), indexHTML);
-      console.log('Caminhos corrigidos com sucesso.');
-    } catch (err) {
-      console.error('Erro ao corrigir caminhos dos assets:', err);
+  
+  // Buscar em todas as possíveis localizações
+  const possibleIndexLocations = [
+    'index.html',
+    'dist/public/index.html',
+    'dist/client/index.html',
+    'client/index.html',
+    'client/dist/index.html',
+    'public/index.html'
+  ];
+  
+  let indexFound = false;
+  
+  for (const indexLocation of possibleIndexLocations) {
+    if (fs.existsSync(indexLocation)) {
+      console.log(`Encontrado index.html em: ${indexLocation}`);
+      fs.copyFileSync(indexLocation, path.join('dist', 'index.html'));
+      indexFound = true;
+      
+      // Corrigir os caminhos dos assets no index.html
+      try {
+        console.log('Corrigindo caminhos dos assets no index.html...');
+        let indexHTML = fs.readFileSync(path.join('dist', 'index.html'), 'utf8');
+        
+        // Adicionar script para injetar ENV no início do <head>
+        if (!indexHTML.includes('window.ENV = {')) {
+          const envScript = `<script>
+    // Variáveis de ambiente para Supabase
+    window.ENV = {
+      VITE_SUPABASE_URL: "${process.env.VITE_SUPABASE_URL || ''}",
+      VITE_SUPABASE_ANON_KEY: "${process.env.VITE_SUPABASE_ANON_KEY || ''}"
+    };
+    console.log("ENV carregado:", window.ENV);
+  </script>`;
+          
+          indexHTML = indexHTML.replace('</head>', `${envScript}\n</head>`);
+        }
+        
+        // Corrigir caminhos
+        indexHTML = indexHTML.replace(/src="\/assets\//g, 'src="/assets/');
+        indexHTML = indexHTML.replace(/href="\/assets\//g, 'href="/assets/');
+        
+        fs.writeFileSync(path.join('dist', 'index.html'), indexHTML);
+        console.log('Caminhos e variáveis de ambiente adicionados com sucesso.');
+      } catch (err) {
+        console.error('Erro ao processar index.html:', err);
+      }
+      
+      break;
     }
-  } else if (fs.existsSync('client/index.html')) {
-    console.log('Copiando client/index.html para dist/');
-    fs.copyFileSync('client/index.html', path.join('dist', 'index.html'));
-  } else {
+  }
+  
+  if (!indexFound) {
     console.warn('WARNING: Nenhum arquivo index.html encontrado. Criando fallback...');
-    // Criar um arquivo de fallback simples
+    // Criar um arquivo de fallback com diagnóstico embutido
     const fallbackHTML = `<!DOCTYPE html>
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Um Chamado à Edificação</title>
+    <title>Um Chamado à Edificação - Diagnóstico</title>
+    <script>
+      // Variáveis de ambiente para Supabase
+      window.ENV = {
+        VITE_SUPABASE_URL: "${process.env.VITE_SUPABASE_URL || ''}",
+        VITE_SUPABASE_ANON_KEY: "${process.env.VITE_SUPABASE_ANON_KEY || ''}"
+      };
+      console.log("ENV carregado:", window.ENV);
+    </script>
     <style>
-      body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; text-align: center; }
-      div { max-width: 500px; padding: 2rem; }
-      h1 { margin-bottom: 1rem; }
+      body { font-family: system-ui, sans-serif; line-height: 1.5; max-width: 800px; margin: 0 auto; padding: 1rem; }
+      h1 { color: #1a365d; margin-bottom: 1rem; }
+      .card { border: 1px solid #e2e8f0; border-radius: 0.5rem; padding: 1rem; margin-bottom: 1rem; }
+      button { background: #3182ce; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.25rem; cursor: pointer; }
+      button:hover { background: #2c5282; }
+      pre { background: #f7fafc; padding: 1rem; border-radius: 0.25rem; overflow-x: auto; font-size: 0.875rem; }
+      .success { color: #38a169; }
+      .error { color: #e53e3e; }
     </style>
   </head>
   <body>
-    <div>
-      <h1>Um Chamado à Edificação</h1>
-      <p>Carregando aplicação...</p>
-      <button onclick="window.location.reload()">Recarregar</button>
+    <h1>Um Chamado à Edificação - Página de Diagnóstico</h1>
+    <div class="card">
+      <h2>Verificação de Variáveis de Ambiente</h2>
+      <p>Testando a disponibilidade das variáveis críticas:</p>
+      <pre id="env-output">Verificando...</pre>
+      <button onclick="checkEnv()">Testar Variáveis</button>
     </div>
+    
+    <div class="card">
+      <h2>Teste de Conexão com Supabase</h2>
+      <p>Verificando a conectividade com o Supabase:</p>
+      <pre id="supabase-output">Aguardando teste...</pre>
+      <button onclick="testSupabase()">Testar Conectividade</button>
+    </div>
+    
+    <script>
+      // Função para verificar variáveis de ambiente
+      function checkEnv() {
+        const output = document.getElementById('env-output');
+        try {
+          const env = window.ENV || {};
+          const result = [
+            'Verificação de Variáveis:',
+            '------------------------',
+            'window.ENV existe? ' + (window.ENV ? 'Sim' : 'Não'),
+            'VITE_SUPABASE_URL: ' + (env.VITE_SUPABASE_URL || 'Não definido'),
+            'VITE_SUPABASE_ANON_KEY: ' + (env.VITE_SUPABASE_ANON_KEY ? 'Definido (valor oculto)' : 'Não definido'),
+            '',
+            'import.meta.env: ' + (typeof import.meta !== 'undefined' && import.meta.env ? 'Disponível' : 'Não disponível')
+          ].join('\\n');
+          
+          output.textContent = result;
+          output.className = window.ENV?.VITE_SUPABASE_URL ? 'success' : 'error';
+        } catch (err) {
+          output.textContent = 'Erro: ' + err.message;
+          output.className = 'error';
+        }
+      }
+      
+      // Iniciar verificação automática
+      checkEnv();
+      
+      // Função para testar conexão com Supabase
+      async function testSupabase() {
+        const output = document.getElementById('supabase-output');
+        output.textContent = 'Conectando...';
+        
+        try {
+          // Carregar o Supabase de um CDN para este teste
+          const script = document.createElement('script');
+          script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
+          script.onload = async () => {
+            try {
+              const { createClient } = window.supabase;
+              
+              if (!window.ENV?.VITE_SUPABASE_URL || !window.ENV?.VITE_SUPABASE_ANON_KEY) {
+                throw new Error('Variáveis de ambiente do Supabase não estão definidas');
+              }
+              
+              const supabase = createClient(
+                window.ENV.VITE_SUPABASE_URL,
+                window.ENV.VITE_SUPABASE_ANON_KEY
+              );
+              
+              output.textContent = 'Cliente Supabase criado, tentando fazer consulta...';
+              
+              // Teste de consulta simples
+              const { data, error } = await supabase
+                .from('cartas_um_chamado_a_edificacao')
+                .select('id')
+                .limit(1);
+              
+              if (error) throw error;
+              
+              output.textContent = 'Conexão com Supabase estabelecida com sucesso!\\n' + 
+                                  'Dados recebidos: ' + JSON.stringify(data);
+              output.className = 'success';
+            } catch (err) {
+              output.textContent = 'Erro ao conectar: ' + err.message;
+              output.className = 'error';
+            }
+          };
+          
+          script.onerror = () => {
+            output.textContent = 'Erro ao carregar a biblioteca Supabase';
+            output.className = 'error';
+          };
+          
+          document.head.appendChild(script);
+        } catch (err) {
+          output.textContent = 'Erro: ' + err.message;
+          output.className = 'error';
+        }
+      }
+    </script>
   </body>
 </html>`;
     fs.writeFileSync(path.join('dist', 'index.html'), fallbackHTML);
-    console.log('Arquivo de fallback criado.');
+    console.log('Arquivo de diagnóstico criado como fallback.');
   }
   
   // Verificar e garantir que a pasta dist/assets existe (necessária para scripts)
@@ -389,7 +523,85 @@ try {
   }
 
 
-  console.log('✅ Build personalizado concluído com sucesso!');
+  // Verificação final crítica: garantir que index.html está na raiz do dist
+if (!fs.existsSync('dist/index.html')) {
+  console.warn('⚠️ AVISO CRÍTICO: index.html não encontrado na raiz do dist!');
+  
+  // Tentar encontrar qualquer index.html e copiá-lo para a raiz
+  const possibleLocations = [
+    'static-index.html',
+    'index-test.html',
+    'dist/public/index.html',
+    'client/index.html',
+    'public/index.html'
+  ];
+  
+  let found = false;
+  for (const loc of possibleLocations) {
+    if (fs.existsSync(loc)) {
+      console.log(`Copiando ${loc} para dist/index.html como último recurso...`);
+      fs.copyFileSync(loc, 'dist/index.html');
+      found = true;
+      break;
+    }
+  }
+  
+  if (!found) {
+    console.log('Criando index.html de diagnóstico na raiz do dist...');
+    const diagnosticHtml = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Diagnóstico - Um Chamado à Edificação</title>
+  <script>
+    window.ENV = {
+      VITE_SUPABASE_URL: "${process.env.VITE_SUPABASE_URL || ''}",
+      VITE_SUPABASE_ANON_KEY: "${process.env.VITE_SUPABASE_ANON_KEY || ''}"
+    };
+  </script>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto; padding: 1rem; }
+    h1 { color: #1a202c; }
+    pre { background: #f7fafc; padding: 1rem; border-radius: 0.25rem; overflow: auto; }
+  </style>
+</head>
+<body>
+  <h1>Diagnóstico da Aplicação</h1>
+  <p>Esta é uma página de diagnóstico gerada automaticamente.</p>
+  <h2>Informações do Ambiente</h2>
+  <pre id="env-info">Carregando...</pre>
+  <script>
+    document.getElementById('env-info').textContent = JSON.stringify({
+      env: window.ENV,
+      location: window.location.toString(),
+      timestamp: new Date().toISOString()
+    }, null, 2);
+  </script>
+</body>
+</html>`;
+    fs.writeFileSync('dist/index.html', diagnosticHtml);
+  }
+}
+
+// Criar arquivo healthcheck.json na raiz para verificação rápida
+const healthcheck = {
+  status: 'ok',
+  timestamp: new Date().toISOString(),
+  build: {
+    env: {
+      node_env: process.env.NODE_ENV,
+      supabase_url_set: !!process.env.VITE_SUPABASE_URL,
+      supabase_anon_key_set: !!process.env.VITE_SUPABASE_ANON_KEY,
+      storage_type: process.env.STORAGE_TYPE
+    }
+  }
+};
+
+fs.writeFileSync('dist/healthcheck.json', JSON.stringify(healthcheck, null, 2));
+console.log('Arquivo healthcheck.json criado para diagnóstico rápido');
+
+console.log('✅ Build personalizado concluído com sucesso!');
 } catch (error) {
   console.error('❌ Erro durante o build personalizado:', error);
   process.exit(1);

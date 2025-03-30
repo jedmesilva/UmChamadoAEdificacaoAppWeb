@@ -7,24 +7,30 @@ Após análise detalhada, identificamos os seguintes problemas que afetam o func
 1. **Configuração de Variáveis de Ambiente**:
    - As variáveis de ambiente `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` não estavam sendo corretamente injetadas no cliente
    - O código não estava preparado para acessar variáveis de ambiente através do objeto `window.ENV`
+   - Inconsistência na forma de acesso às variáveis entre desenvolvimento e produção
 
 2. **Caminhos de Assets**:
    - Os assets estavam sendo referenciados como `/assets/...` mas na Vercel estavam em `/public/assets/...`
    - As regras de rewrite no `vercel.json` não estavam redirecionando corretamente esses caminhos
+   - A estrutura de pastas no build final era inconsistente
 
-3. **Estrutura de Diretórios no Build**:
-   - O Vercel estava procurando arquivos em localizações diferentes das que estavam sendo geradas pelo build
-   - Faltava sincronização entre as pastas `dist/assets` e `dist/public/assets`
+3. **Ponto de Entrada da Aplicação**:
+   - O arquivo `index.html` não estava sendo corretamente posicionado na raiz do diretório `dist`
+   - A regra de rewrite no Vercel estava apontando para `/public/index.html` em vez de `/index.html`
 
-4. **Tipagem TypeScript para Ambiente Global**:
-   - A aplicação não tinha definições de tipo para o objeto global `window.ENV`
-   - Isso causava erros de compilação TypeScript
+4. **Dependências e Bibliotecas**:
+   - Faltava garantir que a biblioteca Supabase estivesse corretamente instalada e disponível
+   - Problemas de consistência entre as dependências declaradas e as efetivamente usadas
+
+5. **Falta de Diagnóstico**:
+   - Ausência de endpoints e páginas de diagnóstico para ajudar a identificar problemas
+   - Dificuldade em capturar erros específicos da Vercel por falta de logs acessíveis
 
 ## Soluções Implementadas
 
 ### 1. Melhoria na Detecção de Variáveis de Ambiente
 
-No arquivo `client/src/lib/supabase.ts`, implementamos uma solução robusta que:
+Implementamos uma solução robusta no arquivo `client/src/lib/supabase.ts` para detectar variáveis de ambiente de múltiplas fontes:
 
 ```typescript
 // Adicionar tipagem para o objeto ENV global na window
@@ -57,18 +63,9 @@ function getEnvVariable(key: string): string {
 }
 ```
 
-### 2. Aprimoramento do Script de Build para Vercel
+### 2. Correção do Ponto de Entrada na Vercel
 
-No arquivo `vercel-build.mjs`, implementamos:
-
-- Verificação detalhada das variáveis de ambiente
-- Cópia dos assets para múltiplos diretórios para garantir compatibilidade
-- Correção dos caminhos dos assets no HTML
-- Garantia de que o arquivo `index.html` está na raiz do diretório `dist`
-
-### 3. Atualização das Regras de Rewrite no Vercel.json
-
-Configuramos o `vercel.json` para redirecionar corretamente os caminhos:
+Atualizamos o `vercel.json` para apontar diretamente para o arquivo `index.html` na raiz:
 
 ```json
 {
@@ -77,31 +74,109 @@ Configuramos o `vercel.json` para redirecionar corretamente os caminhos:
     { "source": "/api/:path*", "destination": "/api/:path*.mjs" },
     { "source": "/assets/:path*", "destination": "/public/assets/:path*" },
     { "source": "/client/assets/:path*", "destination": "/public/client/assets/:path*" },
-    { "source": "/(.*)", "destination": "/public/index.html" }
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
 ```
 
-### 4. Ferramentas de Diagnóstico Criadas
+### 3. Script de Build Aprimorado
 
-Criamos ferramentas para verificar e diagnosticar problemas:
+Reformulamos completamente o script `vercel-build.mjs` para:
 
-1. **test-supabase.js**: Verifica a conectividade com o Supabase
-2. **test-build-paths.js**: Verifica a estrutura de diretórios e caminhos após o build
-3. **test-production.js**: Simula um ambiente de produção similar ao Vercel
-4. **index-test.html**: Página de teste para validar carregamento de assets e conexão com o Supabase
+1. Verificar e reportar o status das variáveis de ambiente
+2. Buscar o arquivo `index.html` em múltiplas localizações possíveis
+3. Injetar automaticamente as variáveis de ambiente no HTML como um script de inicialização
+4. Corrigir os caminhos dos assets no HTML gerado
+5. Sincronizar assets entre múltiplos diretórios para garantir compatibilidade
+6. Criar um arquivo de diagnóstico como fallback caso nenhum `index.html` seja encontrado
+7. Gerar um arquivo `healthcheck.json` para diagnóstico rápido
 
-## Recomendações para Deploy
+### 4. Endpoint de Diagnóstico
 
-1. Configurar corretamente as variáveis de ambiente no Vercel:
-   - `VITE_SUPABASE_URL`: https://mizihlfmbcfgomlutiss.supabase.co
-   - `VITE_SUPABASE_ANON_KEY`: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1pemlobGZtYmNmZ29tbHV0aXNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI5MDA0MjYsImV4cCI6MjA1ODQ3NjQyNn0.4AkfkgtPzFwvAIfZFCT8LxxK2mIk9hgXiwbfvBthzRQ
+Criamos um endpoint `/api/healthcheck` que pode ser acessado mesmo se o frontend falhar:
 
-2. Usar o comando personalizado para build:
+```javascript
+// api/healthcheck.mjs
+export default function handler(req, res) {
+  // Retorna informações detalhadas sobre o ambiente
+  const health = {
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    node: process.version,
+    environment: process.env.NODE_ENV || 'development',
+    env: {
+      supabase_url_set: !!process.env.VITE_SUPABASE_URL,
+      supabase_anon_key_set: !!process.env.VITE_SUPABASE_ANON_KEY,
+      storage_type: process.env.STORAGE_TYPE || 'não definido'
+    },
+    vercel: {
+      is_vercel: !!process.env.VERCEL,
+      vercel_env: process.env.VERCEL_ENV || 'não definido',
+      region: process.env.VERCEL_REGION || 'não definido'
+    }
+  };
+  
+  res.status(200).json(health);
+}
+```
+
+### 5. Página de Diagnóstico Estática
+
+Criamos um arquivo `static-index.html` que serve como página de diagnóstico independente:
+
+- Verifica se as variáveis de ambiente estão disponíveis
+- Testa a conexão com o Supabase usando CDN
+- Verifica os caminhos de assets
+- Não depende do build da aplicação
+
+## Como Testar o Deploy
+
+1. **Verificar API de Diagnóstico**:
+   - Acesse `https://seu-dominio.vercel.app/api/healthcheck`
+   - Verifique se o JSON retornado mostra `"supabase_url_set": true` e `"supabase_anon_key_set": true`
+
+2. **Verificar Página de Diagnóstico**:
+   - Se a aplicação principal não carregar, acesse `https://seu-dominio.vercel.app/static-index.html`
+   - Use os botões para testar variáveis de ambiente, conexão Supabase e caminhos
+
+3. **Verificar Console do Navegador**:
+   - Abra o console do navegador (F12) ao acessar a aplicação
+   - Verifique se há mensagens "ENV carregado: Object" no início
+   - Procure por erros relacionados ao Supabase ou carregamento de assets
+
+4. **Verificar Arquivo de Saúde**:
+   - Acesse `https://seu-dominio.vercel.app/healthcheck.json`
+   - Confirme que o status é "ok" e as variáveis de ambiente estão definidas
+
+## Próximos Passos se os Problemas Persistirem
+
+1. **Verificar Logs da Vercel**:
+   - Acesse o painel da Vercel e verifique os logs de build e função serverless
+   - Procure por erros específicos no processo de build
+
+2. **Testar Rotas Específicas**:
+   - Acesse diretamente `https://seu-dominio.vercel.app/assets/index.js` 
+   - Verifique se os arquivos JS e CSS principais estão acessíveis
+
+3. **Configuração Manual**:
+   - Tente adicionar manualmente um arquivo `.env.production` com as variáveis de ambiente
+   - Refaça o deploy e verifique se há alterações no comportamento
+
+4. **Usar Injeção no HTML**:
+   - Modifique diretamente o HTML inicial para injetar as variáveis como constantes:
+   ```html
+   <script>
+     window.ENV = {
+       VITE_SUPABASE_URL: "https://mizihlfmbcfgomlutiss.supabase.co",
+       VITE_SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1pemlobGZtYmNmZ29tbHV0aXNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI5MDA0MjYsImV4cCI6MjA1ODQ3NjQyNn0.4AkfkgtPzFwvAIfZFCT8LxxK2mIk9hgXiwbfvBthzRQ"
+     };
+   </script>
    ```
-   node vercel-build.mjs
-   ```
 
-3. Após o deploy, verificar no console do navegador se as variáveis de ambiente estão sendo carregadas corretamente através do objeto `window.ENV`
+## Arquivos Importantes a Verificar
 
-4. Se persistirem problemas com caminhos de assets, verificar o HTML gerado e ajustar as regras de rewrite no `vercel.json`
+1. `vercel.json` - Controla redirecionamentos e configurações do deploy
+2. `vercel-build.mjs` - Script de build personalizado
+3. `client/src/lib/supabase.ts` - Configuração do cliente Supabase
+4. `api/healthcheck.mjs` - Endpoint de diagnóstico
+5. `static-index.html` - Página de diagnóstico estática

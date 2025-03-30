@@ -1,31 +1,30 @@
-
-// Endpoint de healthcheck para verificar se a API está funcionando
+// API de verificação de saúde para diagnóstico
 export default function handler(req, res) {
-  try {
-    // Garantir que retorna um JSON válido
-    res.setHeader('Content-Type', 'application/json');
-    // Evitar redirecionamento automático
-    res.setHeader('X-Robots-Tag', 'noindex, nofollow');
-
-    // Coletar informações sobre o ambiente
-    const info = {
-      status: 'ok',
-      timestamp: new Date().toISOString(),
-      environment: process.env.NODE_ENV || 'unknown',
-      version: process.env.npm_package_version || 'unknown',
-      node: process.version,
-      assets: {
-        paths: ['/assets', '/dist/assets', '/client/assets']
-      }
-    };
-
-    // Retornar as informações
-    return res.status(200).json(info);
-  } catch (error) {
-    // Em caso de erro, ainda retornar um JSON válido
-    return res.status(500).json({ 
-      status: 'error', 
-      message: error.message || 'Erro interno no servidor'
-    });
-  }
+  // CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  
+  // Verificar e coletar informações sobre o ambiente
+  const health = {
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    node: process.version,
+    environment: process.env.NODE_ENV || 'development',
+    platform: process.platform,
+    memory: process.memoryUsage(),
+    env: {
+      supabase_url_set: !!process.env.VITE_SUPABASE_URL,
+      supabase_anon_key_set: !!process.env.VITE_SUPABASE_ANON_KEY,
+      storage_type: process.env.STORAGE_TYPE || 'não definido'
+    },
+    vercel: {
+      is_vercel: !!process.env.VERCEL,
+      vercel_env: process.env.VERCEL_ENV || 'não definido',
+      region: process.env.VERCEL_REGION || 'não definido'
+    }
+  };
+  
+  // Responder com as informações coletadas
+  res.status(200).json(health);
 }
