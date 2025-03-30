@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teste de Conexão Supabase</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 2rem;
+      line-height: 1.6;
+    }
+    .container {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .result {
+      padding: 1rem;
+      background-color: #f5f5f5;
+      border-radius: 4px;
+      white-space: pre-wrap;
+      font-family: monospace;
+      max-height: 300px;
+      overflow: auto;
+    }
+    .error {
+      color: #d32f2f;
+      background-color: #ffebee;
+    }
+    .success {
+      color: #388e3c;
+      background-color: #e8f5e9;
+    }
+    button {
+      background-color: #1e88e5;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+      cursor: pointer;
+      margin: 0.5rem 0;
+    }
+    button:hover {
+      background-color: #1976d2;
+    }
+    h1 {
+      border-bottom: 2px solid #eee;
+      padding-bottom: 0.5rem;
+    }
+    h2 {
+      margin-top: 1.5rem;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <h1>Teste de Conexão Supabase</h1>
+  
+  <div class="container">
+    <h2>1. Verificação de Variáveis de Ambiente</h2>
+    <p>Verifica se as variáveis de ambiente do Supabase estão disponíveis.</p>
+    <button id="testEnv">Testar Variáveis de Ambiente</button>
+    <div id="envResult" class="result">Esperando...</div>
+  </div>
+
+  <div class="container">
+    <h2>2. Teste de Conectividade Supabase</h2>
+    <p>Tenta estabelecer uma conexão básica com o Supabase.</p>
+    <button id="testConnection">Testar Conexão</button>
+    <div id="connectionResult" class="result">Esperando...</div>
+  </div>
+
+  <div class="container">
+    <h2>3. Teste de Consulta de Dados</h2>
+    <p>Tenta buscar dados da tabela 'cartas_um_chamado_a_edificacao'.</p>
+    <button id="testFetch">Buscar Cartas</button>
+    <div id="fetchResult" class="result">Esperando...</div>
+  </div>
+
+  <div class="container">
+    <h2>4. Verificação de Caminhos de Arquivos</h2>
+    <p>Testa a resolução de caminhos para arquivos estáticos.</p>
+    <button id="testPaths">Testar Caminhos</button>
+    <div id="pathsResult" class="result">Esperando...</div>
+  </div>
+
+  <script type="module">
+    // Importar Supabase
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+    // Elementos da UI
+    const envResultEl = document.getElementById('envResult');
+    const connectionResultEl = document.getElementById('connectionResult');
+    const fetchResultEl = document.getElementById('fetchResult');
+    const pathsResultEl = document.getElementById('pathsResult');
+
+    // Verificar variáveis de ambiente
+    document.getElementById('testEnv').addEventListener('click', () => {
+      try {
+        envResultEl.innerHTML = 'Verificando...';
+        envResultEl.className = 'result';
+        
+        // Obter variáveis de ambiente de todas as possíveis fontes
+        const supabaseUrl = getEnvVariable('VITE_SUPABASE_URL');
+        const supabaseKey = getEnvVariable('VITE_SUPABASE_ANON_KEY');
+        
+        let result = `VITE_SUPABASE_URL: ${supabaseUrl ? '✅ Encontrado' : '❌ Não encontrado'}\n`;
+        result += `VITE_SUPABASE_ANON_KEY: ${supabaseKey ? '✅ Encontrado' : '❌ Não encontrado'}\n\n`;
+        
+        // Verificar também no window.ENV (usado na Vercel)
+        result += `window.ENV existe? ${window.ENV ? '✅ Sim' : '❌ Não'}\n`;
+        if (window.ENV) {
+          result += `window.ENV.VITE_SUPABASE_URL: ${window.ENV.VITE_SUPABASE_URL ? '✅ Encontrado' : '❌ Não encontrado'}\n`;
+          result += `window.ENV.VITE_SUPABASE_ANON_KEY: ${window.ENV.VITE_SUPABASE_ANON_KEY ? '✅ Encontrado' : '❌ Não encontrado'}\n`;
+        }
+        
+        // Verificar import.meta.env
+        result += `\nimport.meta.env existe? ${import.meta.env ? '✅ Sim' : '❌ Não'}\n`;
+        if (import.meta.env) {
+          result += `import.meta.env.VITE_SUPABASE_URL: ${import.meta.env.VITE_SUPABASE_URL ? '✅ Encontrado' : '❌ Não encontrado'}\n`;
+          result += `import.meta.env.VITE_SUPABASE_ANON_KEY: ${import.meta.env.VITE_SUPABASE_ANON_KEY ? '✅ Encontrado' : '❌ Não encontrado'}\n`;
+        }
+
+        envResultEl.textContent = result;
+        
+        if (supabaseUrl && supabaseKey) {
+          envResultEl.classList.add('success');
+        } else {
+          envResultEl.classList.add('error');
+        }
+      } catch (error) {
+        envResultEl.textContent = `Erro: ${error.message}`;
+        envResultEl.classList.add('error');
+      }
+    });
+
+    // Testar conexão com Supabase
+    document.getElementById('testConnection').addEventListener('click', async () => {
+      try {
+        connectionResultEl.innerHTML = 'Conectando...';
+        connectionResultEl.className = 'result';
+        
+        const supabaseUrl = getEnvVariable('VITE_SUPABASE_URL');
+        const supabaseKey = getEnvVariable('VITE_SUPABASE_ANON_KEY');
+        
+        if (!supabaseUrl || !supabaseKey) {
+          throw new Error('Variáveis de ambiente do Supabase não encontradas.');
+        }
+        
+        const supabase = createClient(supabaseUrl, supabaseKey);
+        
+        // Teste simples de conexão
+        const { data, error } = await supabase.from('cartas_um_chamado_a_edificacao').select('count(*)', { count: 'exact' }).limit(1);
+        
+        if (error) throw error;
+        
+        connectionResultEl.textContent = `Conexão estabelecida com sucesso!\nServidor Supabase: ${supabaseUrl}`;
+        connectionResultEl.classList.add('success');
+      } catch (error) {
+        connectionResultEl.textContent = `Erro de conexão: ${error.message}`;
+        connectionResultEl.classList.add('error');
+      }
+    });
+
+    // Testar busca de dados
+    document.getElementById('testFetch').addEventListener('click', async () => {
+      try {
+        fetchResultEl.innerHTML = 'Buscando dados...';
+        fetchResultEl.className = 'result';
+        
+        const supabaseUrl = getEnvVariable('VITE_SUPABASE_URL');
+        const supabaseKey = getEnvVariable('VITE_SUPABASE_ANON_KEY');
+        
+        if (!supabaseUrl || !supabaseKey) {
+          throw new Error('Variáveis de ambiente do Supabase não encontradas.');
+        }
+        
+        const supabase = createClient(supabaseUrl, supabaseKey);
+        
+        // Buscar dados reais
+        const { data, error } = await supabase
+          .from('cartas_um_chamado_a_edificacao')
+          .select('id, title, id_sumary_carta')
+          .limit(5);
+        
+        if (error) throw error;
+        
+        fetchResultEl.textContent = `Dados obtidos com sucesso! Encontradas ${data.length} cartas:\n\n${JSON.stringify(data, null, 2)}`;
+        fetchResultEl.classList.add('success');
+      } catch (error) {
+        fetchResultEl.textContent = `Erro ao buscar dados: ${error.message}`;
+        fetchResultEl.classList.add('error');
+      }
+    });
+
+    // Testar resolução de caminhos
+    document.getElementById('testPaths').addEventListener('click', async () => {
+      try {
+        pathsResultEl.innerHTML = 'Testando caminhos...';
+        pathsResultEl.className = 'result';
+        
+        // Lista de caminhos de assets comuns para testar
+        const paths = [
+          '/assets/index.js',
+          '/public/assets/index.js',
+          '/dist/assets/index.js',
+          '/assets/index.css',
+          '/public/assets/index.css',
+          '/dist/assets/index.css'
+        ];
+        
+        const results = await Promise.all(paths.map(async (path) => {
+          try {
+            const response = await fetch(path, { method: 'HEAD' });
+            return `${path}: ${response.ok ? '✅ Acessível' : '❌ Não encontrado (status: ' + response.status + ')'}`;
+          } catch (e) {
+            return `${path}: ❌ Erro ao acessar (${e.message})`;
+          }
+        }));
+        
+        pathsResultEl.textContent = results.join('\n');
+      } catch (error) {
+        pathsResultEl.textContent = `Erro ao testar caminhos: ${error.message}`;
+        pathsResultEl.classList.add('error');
+      }
+    });
+
+    // Função para obter variáveis de ambiente de múltiplas fontes
+    function getEnvVariable(key) {
+      // Tentar obter da janela primeiro (usado na Vercel)
+      if (typeof window !== 'undefined' && window.ENV && window.ENV[key]) {
+        const value = window.ENV[key];
+        return value.startsWith('%') && value.endsWith('%') ? '' : value;
+      }
+      
+      // Tentar obter das variáveis de ambiente do Vite
+      if (import.meta.env && import.meta.env[key]) {
+        return import.meta.env[key];
+      }
+      
+      // Fallback
+      return '';
+    }
+  </script>
+</body>
+</html>
