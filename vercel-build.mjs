@@ -584,6 +584,104 @@ if (!fs.existsSync('dist/index.html')) {
   }
 }
 
+// Copiar pasta client se existir
+if (fs.existsSync('client')) {
+  console.log('Copiando pasta client para dist/client...');
+  if (!fs.existsSync('dist/client')) {
+    fs.mkdirSync('dist/client', { recursive: true });
+  }
+  
+  const copyDirRecursive = (src, dest) => {
+    const entries = fs.readdirSync(src, { withFileTypes: true });
+    
+    for (const entry of entries) {
+      const srcPath = path.join(src, entry.name);
+      const destPath = path.join(dest, entry.name);
+      
+      if (entry.isDirectory()) {
+        if (!fs.existsSync(destPath)) {
+          fs.mkdirSync(destPath, { recursive: true });
+        }
+        copyDirRecursive(srcPath, destPath);
+      } else {
+        fs.copyFileSync(srcPath, destPath);
+      }
+    }
+  };
+  
+  try {
+    copyDirRecursive('client', 'dist/client');
+    console.log('Pasta client copiada com sucesso para dist/client');
+    
+    // Verificar se há um arquivo index.html na pasta client
+    if (fs.existsSync('client/index.html')) {
+      console.log('Encontrado client/index.html. Copiando para dist/client/index.html...');
+      fs.copyFileSync('client/index.html', 'dist/client/index.html');
+      
+      // Adicionar variáveis de ambiente ao arquivo
+      let clientIndexHtml = fs.readFileSync('dist/client/index.html', 'utf8');
+      if (!clientIndexHtml.includes('window.ENV = {')) {
+        const envScript = `<script>
+    window.ENV = {
+      VITE_SUPABASE_URL: "${process.env.VITE_SUPABASE_URL || ''}",
+      VITE_SUPABASE_ANON_KEY: "${process.env.VITE_SUPABASE_ANON_KEY || ''}"
+    };
+    console.log("ENV carregado:", window.ENV);
+  </script>`;
+        
+        clientIndexHtml = clientIndexHtml.replace('</head>', `${envScript}\n</head>`);
+        fs.writeFileSync('dist/client/index.html', clientIndexHtml);
+        console.log('Variáveis de ambiente adicionadas a dist/client/index.html');
+      }
+    }
+  } catch (err) {
+    console.error('Erro ao copiar pasta client:', err);
+  }
+}
+
+// Criar arquivos index.html específicos para roteamento na pasta client
+if (fs.existsSync('dist/client')) {
+  const routerHtml = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Um Chamado à Edificação</title>
+  <script>
+    window.ENV = {
+      VITE_SUPABASE_URL: "${process.env.VITE_SUPABASE_URL || ''}",
+      VITE_SUPABASE_ANON_KEY: "${process.env.VITE_SUPABASE_ANON_KEY || ''}"
+    };
+    console.log("ENV carregado:", window.ENV);
+    
+    // Redirecionar para a raiz
+    window.location.href = '/';
+  </script>
+</head>
+<body>
+  <p>Redirecionando...</p>
+</body>
+</html>`;
+
+  // Criar em diversas rotas possíveis
+  const clientRoutes = [
+    'auth',
+    'home',
+    'landing',
+    'letter',
+    'not-found'
+  ];
+  
+  for (const route of clientRoutes) {
+    const routeDir = path.join('dist/client', route);
+    if (!fs.existsSync(routeDir)) {
+      fs.mkdirSync(routeDir, { recursive: true });
+    }
+    fs.writeFileSync(path.join(routeDir, 'index.html'), routerHtml);
+    console.log(`Criado arquivo de roteamento em dist/client/${route}/index.html`);
+  }
+}
+
 // Criar arquivo healthcheck.json na raiz para verificação rápida
 const healthcheck = {
   status: 'ok',

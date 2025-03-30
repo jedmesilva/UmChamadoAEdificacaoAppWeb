@@ -3,18 +3,22 @@
   "version": 2,
   "buildCommand": "node vercel-build.mjs",
   "outputDirectory": "dist",
-  "rewrites": [
-    { "source": "/api/healthcheck", "destination": "/api/healthcheck.mjs" },
-    { "source": "/api/:path*", "destination": "/api/:path*.mjs" },
-    { "source": "/assets/:path*", "destination": "/public/assets/:path*" },
-    { "source": "/client/assets/:path*", "destination": "/public/client/assets/:path*" },
-    { "source": "/(.*)", "destination": "/index.html" }
+  "routes": [
+    { "src": "/api/healthcheck", "dest": "/api/healthcheck.mjs" },
+    { "src": "/api/supabase-status", "dest": "/api/supabase-status.mjs" }, 
+    { "src": "/api/(.*)", "dest": "/api/$1.mjs" },
+    { "src": "/assets/(.*)", "dest": "/assets/$1" },
+    { "src": "/client/(.*)", "dest": "/client/$1" },
+    { "src": "/static-index.html", "dest": "/static-index.html" },
+    { "src": "/healthcheck.json", "dest": "/healthcheck.json" },
+    { "src": "^/$", "dest": "/client/index.html" },
+    { "src": "/(.*)", "dest": "/index.html" }
   ],
   "cleanUrls": true,
   "trailingSlash": false,
   "headers": [
     {
-      "source": "/(.*)",
+      "src": "/(.*)",
       "headers": [
         { "key": "Access-Control-Allow-Origin", "value": "*" },
         { "key": "Access-Control-Allow-Methods", "value": "GET,OPTIONS,PATCH,DELETE,POST,PUT" },
@@ -23,7 +27,7 @@
       ]
     },
     {
-      "source": "/assets/(.*)",
+      "src": "/assets/(.*)",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
       ]
