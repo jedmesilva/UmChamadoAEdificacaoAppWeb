@@ -1,8 +1,5 @@
-// API principal em formato ESM para Vercel Serverless
-// Este arquivo está configurado com "type": "module" no package.json
-// e é destinado a funcionar em ambiente serverless da Vercel
+// API principal para Vercel Serverless
 
-// Usando exclusivamente importações ESM para evitar problemas com "require"
 import { createClient } from '@supabase/supabase-js';
 
 /**
@@ -29,8 +26,8 @@ export default async function handler(req, res) {
   console.log(`Processando requisição: ${req.method} ${url}`);
 
   // Configurar cliente Supabase
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_ANON_KEY;
+  const supabaseUrl = process.env.VITE_SUPABASE_URL;
+  const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
   
   if (!supabaseUrl || !supabaseKey) {
     console.error('Configuração do Supabase não encontrada no ambiente');
