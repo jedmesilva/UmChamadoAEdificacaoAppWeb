@@ -79,11 +79,10 @@ async function initializeServer() {
 
     // Se não estiver no ambiente da Vercel, inicia o servidor
     if (!isVercel) {
-      const port = 5000;
+      const port = process.env.PORT || 5000;
       server.listen({
         port,
         host: "0.0.0.0",
-        reusePort: true,
       }, () => {
         log(`serving on port ${port}`);
       });
