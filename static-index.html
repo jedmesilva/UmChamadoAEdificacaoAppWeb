@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Um Chamado à Edificação</title>
+    <style>
+      :root {
+        --primary: #4a6cf7;
+        --primary-hover: #3a5cf7;
+        --background: #f5f7fa;
+        --card-bg: #ffffff;
+        --text: #333333;
+        --text-secondary: #666666;
+        --border-radius: 8px;
+      }
+      
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background: linear-gradient(135deg, var(--background) 0%, #c3cfe2 100%);
+        color: var(--text);
+        line-height: 1.6;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+      }
+      
+      .container {
+        max-width: 800px;
+        width: 100%;
+        padding: 2rem;
+        background-color: var(--card-bg);
+        border-radius: var(--border-radius);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        text-align: center;
+      }
+      
+      h1 {
+        color: var(--text);
+        margin-bottom: 1rem;
+        font-size: 2rem;
+      }
+      
+      p {
+        color: var(--text-secondary);
+        margin-bottom: 1.5rem;
+        font-size: 1.1rem;
+      }
+      
+      .button {
+        display: inline-block;
+        background-color: var(--primary);
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 4px;
+        text-decoration: none;
+        transition: background-color 0.3s ease;
+        font-weight: 500;
+        margin: 0.5rem;
+      }
+      
+      .button:hover {
+        background-color: var(--primary-hover);
+      }
+      
+      .status-container {
+        margin-top: 2rem;
+        padding: 1rem;
+        border-radius: var(--border-radius);
+        background-color: rgba(0, 0, 0, 0.05);
+      }
+      
+      @media (max-width: 600px) {
+        .container {
+          padding: 1.5rem;
+        }
+        
+        h1 {
+          font-size: 1.8rem;
+        }
+        
+        p {
+          font-size: 1rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Um Chamado à Edificação</h1>
+      <p>Bem-vindo à nossa plataforma dedicada ao crescimento espiritual e à edificação pessoal.</p>
+      
+      <div>
+        <a href="/api/healthcheck" class="button">Verificar Status da API</a>
+        <a href="/" class="button">Ir para Página Principal</a>
+      </div>
+      
+      <div class="status-container">
+        <p>Se você estiver vendo esta página em vez da aplicação principal, isso pode indicar que o servidor está em manutenção ou ocorreu um problema durante a inicialização.</p>
+        <p>Por favor, tente novamente em alguns instantes ou entre em contato com o administrador do sistema.</p>
+      </div>
+    </div>
+    
+    <script>
+      // Verificar status da API automaticamente
+      async function checkApiStatus() {
+        try {
+          const response = await fetch('/api/healthcheck');
+          const data = await response.json();
+          
+          if (data.status === 'ok') {
+            const statusContainer = document.querySelector('.status-container');
+            statusContainer.innerHTML = `
+              <p style="color: #2e7d32;">✅ A API está funcionando corretamente.</p>
+              <p>Status: ${data.status}</p>
+              <p>Timestamp: ${new Date(data.timestamp).toLocaleString()}</p>
+            `;
+            
+            // Tentar carregar a aplicação principal
+            tryLoadMainApp();
+          }
+        } catch (error) {
+          console.error('Erro ao verificar status da API:', error);
+          // Tentar carregar a aplicação mesmo se a API falhar
+          tryLoadMainApp();
+        }
+      }
+      
+      // Procurar por scripts com padrão hash
+      async function findMainScript() {
+        console.log('Procurando pelo script principal com padrão de hash...');
+        
+        // Padrões possíveis de arquivo
+        const possiblePatterns = [
+          '/assets/index-', 
+          '/assets/main-',
+          '/dist/assets/index-',
+          '/dist/assets/main-'
+        ];
+        
+        // Tentar os padrões de hash primeiro para arquivos com hash de build
+        for (const pattern of possiblePatterns) {
+          try {
+            // Tentar fazer uma solicitação para o diretório
+            const dirPath = pattern.substring(0, pattern.lastIndexOf('/'));
+            const dirResponse = await fetch(dirPath);
+            
+            if (dirResponse.ok) {
+              console.log(`Diretório encontrado: ${dirPath}`);
+              // Não podemos listar o diretório no navegador, então vamos tentar alguns hashes comuns
+              const possibleHashes = ['', '1', '2', '3', 'a', 'b', 'c', 'd', 'e', 'f'];
+              
+              for (const hash of possibleHashes) {
+                const testPath = `${pattern}${hash}.js`;
+                try {
+                  const response = await fetch(testPath);
+                  if (response.ok) {
+                    console.log(`Script encontrado: ${testPath}`);
+                    return testPath;
+                  }
+                } catch (err) {
+                  // Ignorar erros individuais e continuar tentando
+                }
+              }
+            }
+          } catch (err) {
+            // Ignorar erros e continuar tentando
+          }
+        }
+        
+        // Se não encontrar nenhum script com padrão de hash, tentar os caminhos diretos
+        const directPaths = [
+          '/assets/index.js',
+          '/assets/main.js',
+          '/dist/assets/index.js',
+          '/dist/assets/main.js',
+          '/client/dist/assets/index.js'
+        ];
+        
+        for (const path of directPaths) {
+          try {
+            const response = await fetch(path);
+            if (response.ok) {
+              console.log(`Script encontrado: ${path}`);
+              return path;
+            }
+          } catch (err) {
+            // Ignorar erros individuais e continuar tentando
+          }
+        }
+        
+        // Se não encontrar nenhum script, retornar o padrão
+        return '/assets/index.js';
+      }
+      
+      // Tentar carregar a aplicação principal
+      async function tryLoadMainApp() {
+        console.log('Tentando carregar a aplicação principal...');
+        
+        try {
+          // Encontrar o script principal
+          const mainScriptPath = await findMainScript();
+          console.log(`Script principal a ser carregado: ${mainScriptPath}`);
+          
+          // Verificar se há um CSS correspondente
+          const cssPath = mainScriptPath.replace('.js', '.css');
+          try {
+            const cssResponse = await fetch(cssPath);
+            if (cssResponse.ok) {
+              console.log(`CSS encontrado: ${cssPath}`);
+              // Adicionar o CSS
+              const link = document.createElement('link');
+              link.rel = 'stylesheet';
+              link.href = cssPath;
+              document.head.appendChild(link);
+            }
+          } catch (cssErr) {
+            // Ignorar erros de CSS
+          }
+          
+          // Adicionar o script principal
+          const script = document.createElement('script');
+          script.type = 'module';
+          script.src = mainScriptPath;
+          
+          // Lidar com sucesso ou falha no carregamento
+          script.onload = () => {
+            console.log('Script principal carregado com sucesso!');
+            
+            // Criar div root para a aplicação React se ainda não existir
+            if (!document.getElementById('root')) {
+              const root = document.createElement('div');
+              root.id = 'root';
+              document.body.appendChild(root);
+            }
+            
+            // Remover a interface de fallback após um tempo
+            setTimeout(() => {
+              const container = document.querySelector('.container');
+              if (container && document.getElementById('root')) {
+                container.style.display = 'none';
+              }
+            }, 2000);
+          };
+          
+          script.onerror = () => {
+            console.error(`Erro ao carregar o script principal: ${mainScriptPath}`);
+            // Atualizar a interface para mostrar o erro
+            const statusContainer = document.querySelector('.status-container');
+            statusContainer.innerHTML = `
+              <p style="color: #d32f2f;">❌ Não foi possível carregar o aplicativo principal.</p>
+              <p>Estamos enfrentando dificuldades técnicas.</p>
+              <p>Por favor, tente novamente mais tarde ou entre em contato com o suporte.</p>
+            `;
+          };
+          
+          // Adicionar o script ao documento
+          document.head.appendChild(script);
+          
+        } catch (error) {
+          console.error('Erro ao tentar carregar a aplicação:', error);
+          // Se falhar, mostrar mensagem de erro
+          const statusContainer = document.querySelector('.status-container');
+          statusContainer.innerHTML = `
+            <p style="color: #d32f2f;">❌ Erro ao inicializar a aplicação.</p>
+            <p>Detalhes: ${error.message || 'Erro desconhecido'}</p>
+            <p>Por favor, tente novamente mais tarde.</p>
+          `;
+        }
+      }
+      
+      // Executar verificação após 1 segundo
+      setTimeout(checkApiStatus, 1000);
+    </script>
+  </body>
+</html>
