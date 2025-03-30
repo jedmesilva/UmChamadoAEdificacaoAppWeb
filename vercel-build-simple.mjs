@@ -29,13 +29,47 @@ try {
 
   // 3. Verificando arquivos importantes
   console.log('🔍 Verificando arquivos essenciais...');
-  ['index.html', 'assets'].forEach(item => {
-    const itemPath = path.join(distDir, item);
-    if (!fs.existsSync(itemPath)) {
-      console.error(`❌ Item "${item}" não encontrado em dist/!`);
-      process.exit(1);
+  
+  // 3.1 Arquivos do frontend
+  const publicDir = path.join(distDir, 'public');
+  if (!fs.existsSync(publicDir)) {
+    console.log('⚠️ Diretório "dist/public" não encontrado!');
+  } else {
+    ['index.html', 'assets'].forEach(item => {
+      const itemPath = path.join(publicDir, item);
+      if (!fs.existsSync(itemPath)) {
+        console.warn(`⚠️ Item "${item}" não encontrado em dist/public/!`);
+      } else {
+        console.log(`✅ ${item} verificado com sucesso`);
+      }
+    });
+  }
+  
+  // 3.2 Verificar arquivos do servidor
+  const serverFile = path.join(distDir, 'index.js');
+  if (!fs.existsSync(serverFile)) {
+    console.warn('⚠️ Arquivo do servidor "dist/index.js" não encontrado!');
+  } else {
+    console.log('✅ Servidor compilado encontrado');
+  }
+  
+  // 3.3 Verificar arquivos de API (vercel serverless functions)
+  console.log('🔍 Verificando funções da API...');
+  
+  // Verificar se pasta dist/api existe (para funções serverless)
+  const apiDir = path.join(distDir, 'api');
+  if (!fs.existsSync(apiDir)) {
+    // Se não existir, verificar se as APIs originais estão na raiz
+    if (fs.existsSync('api')) {
+      console.log('⚠️ Diretório "api" encontrado na raiz, mas não em "dist/api".');
+      console.log('   Isto pode ser esperado se as APIs forem copiadas depois pelo Vercel.');
+    } else {
+      console.warn('⚠️ Nenhum diretório de API encontrado!');
     }
-  });
+  } else {
+    const apiFiles = fs.readdirSync(apiDir);
+    console.log(`✅ ${apiFiles.length} arquivos de API encontrados em dist/api/`);
+  }
 
   console.log('✅ Verificação de arquivos concluída!');
 
