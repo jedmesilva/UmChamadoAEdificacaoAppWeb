@@ -58,10 +58,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Testar a conexão com uma consulta simples
       const start = Date.now();
-      const { data, error } = await supabase
+      const { count, error } = await supabase
         .from('subscription_um_chamado')
-        .select('count', { count: 'exact' })
-        .limit(1);
+        .select('*', { count: 'exact', head: true });
         
       const end = Date.now();
       const responseTime = end - start;
@@ -77,7 +76,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         timestamp: new Date().toISOString(),
         responseTime: `${responseTime}ms`,
         counts: {
-          subscriptions: data?.count || 0
+          subscriptions: count || 0
         }
       });
       
