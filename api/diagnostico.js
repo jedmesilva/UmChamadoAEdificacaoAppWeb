@@ -3,36 +3,70 @@
  * Retorna informações importantes para diagnóstico da aplicação.
  */
 
+import { createClient } from '@supabase/supabase-js';
+
 export default async function handler(req, res) {
-  try {
-    // Verificar se as variáveis de ambiente estão definidas
-    const envInfo = {
-      environment: process.env.NODE_ENV || 'não definido',
-      isVercel: !!process.env.VERCEL,
-      vercelEnv: process.env.VERCEL_ENV || 'não definido',
-      vercelRegion: process.env.VERCEL_REGION || 'não definido',
-      supabaseUrlSet: !!process.env.VITE_SUPABASE_URL,
-      supabaseAnonKeySet: !!process.env.VITE_SUPABASE_ANON_KEY,
-      storageType: process.env.STORAGE_TYPE || 'não definido'
-    };
+  // Cabeçalhos CORS
+  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+  );
 
-    // Criar um objeto com os dados de diagnóstico
-    const diagnosticData = {
-      status: 'ok',
-      timestamp: new Date().toISOString(),
-      environment: envInfo,
-      runningAt: 'vercel-serverless',
-      version: '1.0.0'
-    };
-
-    // Retornar os dados de diagnóstico
-    res.status(200).json(diagnosticData);
-  } catch (error) {
-    // Capturar e retornar qualquer erro que ocorra
-    res.status(500).json({
-      status: 'error',
-      message: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
   }
+
+  // Coletar informações do ambiente
+  const envVariables = {
+    NODE_ENV: process.env.NODE_ENV || 'não definido',
+    VERCEL_ENV: process.env.VERCEL_ENV || 'não definido',
+    VERCEL_URL: process.env.VERCEL_URL || 'não definido',
+    VERCEL_REGION: process.env.VERCEL_REGION || 'não definido',
+    SUPABASE_URL_SET: !!process.env.VITE_SUPABASE_URL,
+    SUPABASE_KEY_SET: !!process.env.VITE_SUPABASE_ANON_KEY
+  };
+
+  // Verificar status do Supabase
+  let supabaseStatus = {
+    connected: false,
+    error: null
+  };
+
+  if (process.env.VITE_SUPABASE_URL && process.env.VITE_SUPABASE_ANON_KEY) {
+    try {
+      const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY);
+      const { data, error } = await supabase.from('subscription_um_chamado').select('count(*)', { count: 'exact', head: true });
+      
+      if (error) {
+        supabaseStatus.error = error.message;
+      } else {
+        supabaseStatus.connected = true;
+      }
+    } catch (error) {
+      supabaseStatus.error = error.message;
+    }
+  }
+
+  // Informações do runtime
+  const runtimeInfo = {
+    nodeVersion: process.version,
+    platform: process.platform,
+    arch: process.arch,
+    memory: process.memoryUsage(),
+    timestamp: new Date().toISOString(),
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+  };
+
+  // Retornar todas as informações de diagnóstico
+  return res.status(200).json({
+    status: 'success',
+    message: 'Diagnóstico de ambiente Vercel e Supabase',
+    environment: envVariables,
+    supabase: supabaseStatus,
+    runtime: runtimeInfo
+  });
 }

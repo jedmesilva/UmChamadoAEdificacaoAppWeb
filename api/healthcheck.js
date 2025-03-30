@@ -1,31 +1,29 @@
-// API de verificação de saúde para diagnóstico
+/**
+ * API endpoint para verificação de saúde da aplicação
+ * Esta função apenas retorna status 200 para confirmar que a API está funcionando.
+ */
+
 export default function handler(req, res) {
-  // CORS headers
+  // Cabeçalhos CORS para permitir acesso de diferentes origens
+  res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  
-  // Verificar e coletar informações sobre o ambiente
-  const health = {
-    status: 'ok',
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+  );
+
+  // Para requisições OPTIONS (pre-flight), apenas retorna status 200
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
+  // Para requisições GET, retorna uma mensagem de status simples
+  res.status(200).json({
+    status: 'OK',
+    message: 'API está funcionando corretamente',
     timestamp: new Date().toISOString(),
-    node: process.version,
-    environment: process.env.NODE_ENV || 'development',
-    platform: process.platform,
-    memory: process.memoryUsage(),
-    env: {
-      supabase_url_set: !!process.env.VITE_SUPABASE_URL,
-      supabase_anon_key_set: !!process.env.VITE_SUPABASE_ANON_KEY,
-      storage_type: process.env.STORAGE_TYPE || 'não definido'
-    },
-    vercel: {
-      is_vercel: !!process.env.VERCEL,
-      vercel_env: process.env.VERCEL_ENV || 'não definido',
-      region: process.env.VERCEL_REGION || 'não definido'
-    },
-    deployment: 'Vercel Serverless Function'
-  };
-  
-  // Responder com as informações coletadas
-  res.status(200).json(health);
+    environment: process.env.NODE_ENV || 'development'
+  });
 }

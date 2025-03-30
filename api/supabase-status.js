@@ -1,57 +1,70 @@
-export default async function handler(req, res) {
-  // CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+/**
+ * API endpoint para verificação do status do Supabase
+ * Verifica a conectividade com o Supabase e retorna o status
+ */
 
-  // Verifica se as variáveis de ambiente estão definidas
-  const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
-  const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || '';
-  
-  const hasEnvVars = !!supabaseUrl && !!supabaseAnonKey;
-  
-  // Tentar fazer um ping ao Supabase para verificar disponibilidade
-  let supabaseAvailable = false;
-  let supabaseError = null;
-  let supabaseLatency = null;
-  
-  if (hasEnvVars) {
-    try {
-      const startTime = Date.now();
-      const response = await fetch(`${supabaseUrl}/auth/v1/health`, {
-        method: 'GET',
-        headers: {
-          'apikey': supabaseAnonKey,
-        },
-      });
-      const endTime = Date.now();
-      supabaseLatency = endTime - startTime;
-      
-      if (response.ok) {
-        const data = await response.json();
-        supabaseAvailable = true;
-      } else {
-        supabaseError = `Erro HTTP ${response.status}: ${response.statusText}`;
-      }
-    } catch (error) {
-      supabaseError = `Erro na conexão: ${error.message}`;
-    }
-  } else {
-    supabaseError = 'Variáveis de ambiente não definidas';
+import { createClient } from '@supabase/supabase-js';
+
+export default async function handler(req, res) {
+  // Cabeçalhos CORS
+  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+  );
+
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
   }
-  
-  // Responder com o status
-  res.status(200).json({
-    timestamp: new Date().toISOString(),
-    env: {
-      supabase_url_set: !!supabaseUrl,
-      supabase_anon_key_set: !!supabaseAnonKey
-    },
-    supabase: {
-      available: supabaseAvailable,
-      latency: supabaseLatency,
-      error: supabaseError
-    },
-    deployment: 'Vercel Serverless Function'
-  });
+
+  // Variáveis de ambiente do Supabase
+  const supabaseUrl = process.env.VITE_SUPABASE_URL;
+  const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
+
+  // Verificar se as variáveis de ambiente estão definidas
+  if (!supabaseUrl || !supabaseKey) {
+    return res.status(500).json({
+      status: 'error',
+      message: 'Variáveis de ambiente do Supabase não estão configuradas',
+      environmentVars: {
+        supabaseUrl: !!supabaseUrl,
+        supabaseKey: !!supabaseKey
+      }
+    });
+  }
+
+  try {
+    // Criar cliente do Supabase
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    
+    // Fazer uma consulta simples para verificar a conectividade
+    const { data, error } = await supabase.from('subscription_um_chamado').select('count(*)', { count: 'exact', head: true });
+
+    if (error) {
+      return res.status(500).json({
+        status: 'error',
+        message: 'Erro ao conectar ao Supabase',
+        error: error.message,
+        details: error
+      });
+    }
+
+    // Retornar resposta de sucesso
+    return res.status(200).json({
+      status: 'success',
+      message: 'Conectado ao Supabase com sucesso',
+      timestamp: new Date().toISOString(),
+      supabaseStatus: 'connected'
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: 'error',
+      message: 'Erro ao verificar status do Supabase',
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
 }
