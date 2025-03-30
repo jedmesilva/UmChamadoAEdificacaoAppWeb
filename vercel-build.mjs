@@ -601,17 +601,6 @@ const healthcheck = {
 fs.writeFileSync('dist/healthcheck.json', JSON.stringify(healthcheck, null, 2));
 console.log('Arquivo healthcheck.json criado para diagnóstico rápido');
 
-// Copiar as páginas estáticas de diagnóstico para a pasta dist
-const diagnosticPages = ['static-index.html', 'test-js-css.html'];
-for (const page of diagnosticPages) {
-  if (fs.existsSync(page)) {
-    console.log(`Copiando página de diagnóstico ${page} para dist/${page}`);
-    fs.copyFileSync(page, `dist/${page}`);
-  } else {
-    console.warn(`AVISO: ${page} não encontrado para copiar`);
-  }
-}
-
 console.log('✅ Build personalizado concluído com sucesso!');
 } catch (error) {
   console.error('❌ Erro durante o build personalizado:', error);

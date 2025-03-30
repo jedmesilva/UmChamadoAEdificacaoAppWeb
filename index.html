@@ -1,34 +1,27 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Um Chamado à Edificação</title>
-  <!-- Injeção imediata das variáveis de ambiente para o Supabase -->
-  <script>
-    // Esta é uma versão simplificada para diagnóstico inicial
-    // As variáveis efetivas serão injetadas pelo script de build
-    window.ENV = window.ENV || {
-      VITE_SUPABASE_URL: "https://mizihlfmbcfgomlutiss.supabase.co",
-      VITE_SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1pemlobGZtYmNmZ29tbHV0aXNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI5MDA0MjYsImV4cCI6MjA1ODQ3NjQyNn0.4AkfkgtPzFwvAIfZFCT8LxxK2mIk9hgXiwbfvBthzRQ"
-    };
-    console.log("ENV inicializado:", window.ENV);
-  </script>
-  <script type="module" crossorigin src="/assets/index.js"></script>
-  <link rel="stylesheet" href="/assets/index.css">
-</head>
-<body>
-  <div id="root">
-    <!-- Durante o carregamento, mostrar um indicador simples -->
-    <div style="display: flex; justify-content: center; align-items: center; height: 100vh; flex-direction: column; font-family: system-ui, sans-serif;">
-      <h1 style="margin-bottom: 1rem; color: #2563eb;">Um Chamado à Edificação</h1>
-      <p>Carregando aplicação...</p>
-      <div style="margin-top: 2rem;">
-        <a href="/static-index.html" style="color: #2563eb; text-decoration: underline;">Página de diagnóstico</a>
-        |
-        <a href="/api/healthcheck" style="color: #2563eb; text-decoration: underline;">API de saúde</a>
-      </div>
-    </div>
-  </div>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Um Chamado à Edificação</title>
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <meta name="description" content="Um Chamado à Edificação - Cartas semanais para o despertar dos edificadores" />
+    <!-- Garantir que as variáveis de ambiente estejam disponíveis -->
+    <script>
+      window.ENV = {
+        VITE_SUPABASE_URL: "%VITE_SUPABASE_URL%",
+        VITE_SUPABASE_ANON_KEY: "%VITE_SUPABASE_ANON_KEY%"
+      };
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/public/assets/index-DdhoYYzV.js"></script>
+    <link rel="stylesheet" href="/public/assets/index-D6rCHDcb.css">
+  </body>
 </html>
