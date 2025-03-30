@@ -1,21 +1,9 @@
 
 {
-  "version": 2,
-  "buildCommand": "node vercel-cleanup.js && npm run build",
+  "framework": "vite",
+  "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "public": true,
-  "cleanUrls": true,
-  "trailingSlash": false,
   "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        { "key": "Access-Control-Allow-Origin", "value": "*" },
-        { "key": "Access-Control-Allow-Methods", "value": "GET,OPTIONS,PATCH,DELETE,POST,PUT" },
-        { "key": "Access-Control-Allow-Headers", "value": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization" },
-        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
-      ]
-    },
     {
       "source": "/assets/(.*)",
       "headers": [
@@ -23,13 +11,17 @@
       ]
     }
   ],
-  "rewrites": [
-    { "source": "/api/healthcheck", "destination": "/api/healthcheck.js" },
-    { "source": "/api/(.*)", "destination": "/api/$1.js" },
-    { "source": "/(.*)", "destination": "/index.html" }
-  ],
-  "env": {
-    "NODE_ENV": "production",
-    "STORAGE_TYPE": "supabase"
-  }
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1.js"
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ]
 }

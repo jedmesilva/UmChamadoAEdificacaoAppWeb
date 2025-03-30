@@ -1,106 +1,80 @@
-# Guia de Deploy no Vercel
+# Guia de Implantação no Vercel
 
-Este guia oferece instruções passo a passo para implantar a aplicação no Vercel.
+Este documento fornece instruções para implantar corretamente a aplicação React no Vercel.
 
-## Pré-requisitos
+## Preparação do Projeto
 
-1. Você precisa ter uma conta no [Vercel](https://vercel.com/).
-2. Você precisa ter uma conta no [Supabase](https://supabase.io/) e um projeto criado com as tabelas necessárias.
-3. O repositório precisa estar configurado em um provedor Git suportado (GitHub, GitLab ou Bitbucket).
+Antes de implantar, execute o script de preparação para garantir que a estrutura do projeto esteja correta:
 
-## Variáveis de Ambiente
+```bash
+node prepare-build.js
+```
 
-Configure as seguintes variáveis de ambiente no painel do Vercel:
+Este script irá:
+1. Verificar e sincronizar os arquivos da pasta `client/src` para a pasta `src` na raiz
+2. Verificar a presença do arquivo `index.html` na raiz
+3. Validar a configuração do Vite e o arquivo `package.json`
 
-**Variáveis Obrigatórias:**
-- `VITE_SUPABASE_URL`: URL do seu projeto Supabase
-- `VITE_SUPABASE_ANON_KEY`: Chave anônima do seu projeto Supabase
+## Estrutura de Arquivos Correta
 
-**Variáveis Opcionais:**
-- `SUPABASE_SERVICE_ROLE_KEY`: Chave de serviço do Supabase (para funções admin)
-- `STORAGE_TYPE`: Defina como "supabase" para usar o Supabase como banco de dados
+A estrutura correta para implantação no Vercel com Vite deve ser:
 
-## Estrutura do Projeto
+```
+.
+├── api/                       # Funções serverless API
+│   ├── healthcheck.js
+│   └── index.js
+├── src/                       # Código-fonte React
+│   ├── components/
+│   ├── hooks/
+│   ├── lib/
+│   ├── pages/
+│   ├── App.tsx
+│   ├── index.css
+│   └── main.tsx
+├── index.html                 # Arquivo HTML principal na raiz
+├── vercel.json                # Configuração do Vercel
+├── vite.config.ts             # Configuração do Vite
+└── package.json               # Dependências e scripts
+```
 
-Este projeto foi estruturado para ser compatível com o Vercel:
+## Configuração do Vercel
 
-1. **Pasta `/api`** 
-   - Contém os endpoints de API serverless que serão executados no Vercel
-   - Estes arquivos são JavaScript puro e não TypeScript para facilitar a execução
+O arquivo `vercel.json` está configurado para:
 
-2. **Pasta `/src`**
-   - Contém o código frontend da aplicação
-
-3. **Configuração `vercel.json`**
-   - Define regras de roteamento e reescrita para o Vercel
-   - Configura headers CORS e outras configurações
+1. Reconhecer este projeto como uma aplicação Vite
+2. Servir corretamente os arquivos estáticos
+3. Rotear solicitações para a API adequadamente
+4. Gerenciar o client-side routing do React
 
 ## Passos para Implantação
 
-1. **Vincule seu repositório ao Vercel**
-   - Acesse o [Dashboard do Vercel](https://vercel.com/dashboard)
-   - Clique em "Add New" > "Project"
-   - Selecione o repositório contendo este projeto
+1. Certifique-se de que seu repositório esteja no GitHub
+2. No Vercel Dashboard, clique em "New Project"
+3. Importe o repositório do GitHub
+4. Na configuração do projeto:
+   - Framework Preset: Vite
+   - Build Command: `npm run build`
+   - Output Directory: `dist`
+   - Variáveis de ambiente: Configure as variáveis necessárias para o Supabase:
+     - `VITE_SUPABASE_URL`
+     - `VITE_SUPABASE_ANON_KEY`
 
-2. **Configure o projeto**
-   - Framework Preset: Defina como "Other"
-   - Root Directory: Mantenha o valor padrão (/)
-   - Build Command: Já está configurado no `vercel.json` como `node vercel-cleanup.js && npm run build`
-   - Output Directory: Já está configurado como `dist`
-   - Node.js Version: Defina como 18.x (este projeto foi configurado para Node.js 18)
-
-3. **Configure as variáveis de ambiente**
-   - Adicione as variáveis listadas acima na seção "Environment Variables"
-
-4. **Deploy**
-   - Clique em "Deploy" e aguarde a conclusão do processo
-
-## Verificando o Deploy
-
-Após o deploy, você pode verificar o status da aplicação usando os seguintes endpoints:
-
-- `/api/healthcheck` - Informações básicas sobre o ambiente
-- `/api/supabase-status` - Verifica a conexão com o Supabase
+5. Clique em "Deploy"
 
 ## Solução de Problemas
 
-Se encontrar problemas ao fazer o deploy, verifique:
+Se você encontrar problemas durante a implantação:
 
-1. **Logs de Build**
-   - Revise os logs de build no painel do Vercel para identificar erros
+1. **Arquivo index.html não encontrado**: Certifique-se de que o arquivo `index.html` está na raiz do projeto
+2. **Erro de build**: Verifique os logs de build para identificar o problema
+3. **Arquivos estáticos não encontrados**: Verifique se a estrutura do projeto está seguindo o padrão descrito acima
+4. **Erros com a API**: Verifique se as funções serverless na pasta `/api` estão configuradas corretamente
 
-2. **Conflitos de Arquivos**
-   - Execute `node vercel-pre-deploy-check.js` localmente antes de enviar para identificar conflitos
-   - Execute `node vercel-cleanup.js` para resolver conflitos automaticamente
+## Verificação Pós-Implantação
 
-3. **Variáveis de Ambiente**
-   - Verifique se todas as variáveis obrigatórias estão configuradas
-   - Execute `node vercel-env-check.js` localmente para verificar (com as variáveis configuradas no ambiente local)
+Depois que a implantação for concluída, verifique:
 
-4. **API Endpoints**
-   - Verifique os logs de Function no painel do Vercel para identificar erros em endpoints específicos
-
-5. **Versão do Node.js**
-   - Este projeto foi configurado para Node.js 18.x
-   - Verifique se a versão do Node.js está correta no painel do Vercel em Project Settings > General > Node.js Version
-   - Se necessário, execute `node vercel-node-version-check.js` para verificar compatibilidade
-
-6. **Renderização do Frontend**
-   - Se o seu deploy estiver mostrando código-fonte em vez do site renderizado:
-     - Verifique se o diretório de saída está configurado como `dist` no Vercel
-     - Confirme que o arquivo `vercel.json` tem as configurações corretas de rotas e rewrites
-     - Verifique se a estrutura de build está correta com o frontend em `/public/index.html`
-   - Para testar se o servidor estático está funcionando, acesse `/static-index.html`
-
-## Melhorias Futuras
-
-Recomendações para desenvolvedores que desejam melhorar o processo de deploy:
-
-1. Configurar GitHub Actions para testes automáticos antes do deploy
-2. Implementar preview deploys para branches de desenvolvimento
-3. Configurar monitoramento e alertas para falhas nos endpoints de API
-
----
-
-Versão: 1.0.0  
-Última atualização: Março 2025
+1. Acesse a URL do site implantado
+2. Teste as APIs através dos endpoints `/api/healthcheck` e `/api/supabase-status`
+3. Verifique se as variáveis de ambiente foram corretamente injetadas no cliente
