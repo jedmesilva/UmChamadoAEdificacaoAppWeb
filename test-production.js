@@ -1,106 +1,164 @@
-// Script para testar o comportamento em produção
-import express from 'express';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import dotenv from 'dotenv';
+const http = require('http');
+const fs = require('fs');
+const path = require('path');
+const { exec } = require('child_process');
 
-dotenv.config();
-
-// Obter o diretório atual
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Configurações
+const PORT = process.env.PORT || 3000;
+const DIST_DIR = path.join(__dirname, 'dist');
 
 // Cores para o console
 const colors = {
   reset: '\x1b[0m',
-  red: '\x1b[31m',
+  bright: '\x1b[1m',
   green: '\x1b[32m',
   yellow: '\x1b[33m',
-  blue: '\x1b[34m',
-  magenta: '\x1b[35m',
+  red: '\x1b[31m',
   cyan: '\x1b[36m',
+  gray: '\x1b[90m'
 };
 
-// Função para exibir mensagem colorida
 function log(message, color = colors.reset) {
-  console.log(`${color}${message}${colors.reset}`);
+  console.log(color + message + colors.reset);
 }
 
-// Criar servidor express
-const app = express();
-const PORT = 5173;
+// Verificar se o diretório dist existe
+if (!fs.existsSync(DIST_DIR)) {
+  log(`Diretório ${DIST_DIR} não encontrado. Execute npm run build primeiro.`, colors.red);
+  process.exit(1);
+}
 
-// Injetar variáveis de ambiente no HTML
+// Injetar variáveis de ambiente no HTML se necessário
 function injectEnvVars(htmlContent) {
-  const envVars = {
-    VITE_SUPABASE_URL: process.env.VITE_SUPABASE_URL || '',
-    VITE_SUPABASE_ANON_KEY: process.env.VITE_SUPABASE_ANON_KEY || ''
+  // Verificar se o script de injeção de ENV já existe
+  if (htmlContent.includes('window.ENV = {')) {
+    log('Variáveis de ambiente já injetadas no HTML', colors.green);
+    return htmlContent;
+  }
+
+  log('Injetando variáveis de ambiente no HTML...', colors.yellow);
+  
+  // Criar script para injetar ENV
+  const envScript = `<script>
+  // Variáveis de ambiente para Supabase
+  window.ENV = {
+    VITE_SUPABASE_URL: "${process.env.VITE_SUPABASE_URL || ''}",
+    VITE_SUPABASE_ANON_KEY: "${process.env.VITE_SUPABASE_ANON_KEY || ''}"
   };
-  
-  // Criar script para injetar variáveis
-  const envScript = `
-    <script>
-      window.ENV = ${JSON.stringify(envVars)};
-      console.log('Variáveis de ambiente injetadas:', window.ENV);
-    </script>
-  `;
-  
-  // Injetar antes do fechamento da tag head
-  return htmlContent.replace('</head>', `${envScript}</head>`);
+  console.log("ENV carregado:", window.ENV);
+</script>`;
+
+  // Inserir antes do fechamento do head
+  return htmlContent.replace('</head>', `${envScript}\n</head>`);
 }
 
-// Simular as regras de rewrite do Vercel
-app.use('/api/:path(*)', (req, res) => {
-  const apiPath = req.params.path;
-  res.send(`API simulada: ${apiPath}`);
-});
-
-// Servir assets estáticos
-app.use('/assets', express.static(path.join(__dirname, 'dist/assets')));
-app.use('/public/assets', express.static(path.join(__dirname, 'dist/public/assets')));
-
-// Simular o comportamento de fallback para index.html
-app.get('*', (req, res) => {
-  try {
-    let htmlPath = path.join(__dirname, 'dist/index.html');
-    
-    if (!fs.existsSync(htmlPath)) {
-      htmlPath = path.join(__dirname, 'index.html');
-      log('Usando index.html na raiz como fallback', colors.yellow);
-    }
-    
-    if (fs.existsSync(htmlPath)) {
-      // Ler o HTML e injetar variáveis de ambiente
-      let htmlContent = fs.readFileSync(htmlPath, 'utf8');
-      htmlContent = injectEnvVars(htmlContent);
-      
-      res.setHeader('Content-Type', 'text/html');
-      res.send(htmlContent);
-    } else {
-      throw new Error('Arquivo index.html não encontrado');
-    }
-  } catch (error) {
-    log(`Erro ao servir HTML: ${error.message}`, colors.red);
-    res.status(500).send(`Erro: ${error.message}`);
+// Criar servidor HTTP para servir os arquivos estáticos
+const server = http.createServer((req, res) => {
+  // Normalizar URL
+  let url = req.url;
+  
+  if (url === '/') {
+    url = '/index.html';
   }
+  
+  // Lidar com API
+  if (url.startsWith('/api/')) {
+    // Verificar se é um endpoint conhecido
+    const apiPath = url.substring(5);
+    
+    if (apiPath === 'healthcheck' || apiPath === 'status') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        env: process.env.NODE_ENV || 'production',
+        url: url
+      }));
+    }
+    
+    // Se não for um endpoint conhecido, retornar 404
+    res.writeHead(404, { 'Content-Type': 'application/json' });
+    return res.end(JSON.stringify({ error: 'Endpoint não encontrado' }));
+  }
+  
+  // Caminho do arquivo
+  const filePath = path.join(DIST_DIR, url);
+  
+  // Obter extensão para determinar o tipo de conteúdo
+  const extname = String(path.extname(filePath)).toLowerCase();
+  const contentType = {
+    '.html': 'text/html',
+    '.js': 'text/javascript',
+    '.css': 'text/css',
+    '.json': 'application/json',
+    '.png': 'image/png',
+    '.jpg': 'image/jpg',
+    '.gif': 'image/gif',
+    '.svg': 'image/svg+xml',
+    '.wav': 'audio/wav',
+    '.mp4': 'video/mp4',
+    '.woff': 'application/font-woff',
+    '.ttf': 'application/font-ttf',
+    '.eot': 'application/vnd.ms-fontobject',
+    '.otf': 'application/font-otf',
+    '.wasm': 'application/wasm'
+  }[extname] || 'application/octet-stream';
+  
+  // Verificar se o arquivo existe
+  fs.readFile(filePath, (error, content) => {
+    if (error) {
+      if (error.code === 'ENOENT') {
+        // Se for uma requisição HTML para uma rota desconhecida, servir index.html
+        // Este comportamento simula o rewrite do Vercel para SPA
+        if (req.headers.accept && req.headers.accept.includes('text/html')) {
+          fs.readFile(path.join(DIST_DIR, 'index.html'), (err, indexContent) => {
+            if (err) {
+              res.writeHead(500);
+              res.end('Erro interno do servidor');
+              return;
+            }
+            
+            // Injetar variáveis de ambiente se necessário
+            const processedContent = injectEnvVars(indexContent.toString());
+            
+            res.writeHead(200, { 'Content-Type': 'text/html' });
+            res.end(processedContent, 'utf-8');
+          });
+          return;
+        }
+        
+        // Não encontrado
+        res.writeHead(404);
+        res.end('Não encontrado: ' + filePath);
+      } else {
+        // Erro do servidor
+        res.writeHead(500);
+        res.end('Erro: ' + error.code);
+      }
+      return;
+    }
+    
+    // Sucesso
+    let processedContent = content;
+    
+    // Para arquivos HTML, injetar variáveis de ambiente se necessário
+    if (contentType === 'text/html') {
+      processedContent = injectEnvVars(content.toString());
+    }
+    
+    res.writeHead(200, { 'Content-Type': contentType });
+    res.end(processedContent, 'utf-8');
+  });
 });
 
-// Iniciar servidor
-app.listen(PORT, () => {
-  log(`🚀 Servidor de teste iniciado em http://localhost:${PORT}`, colors.green);
-  log(`🔑 Variáveis de ambiente carregadas:`, colors.cyan);
-  log(`   VITE_SUPABASE_URL: ${process.env.VITE_SUPABASE_URL ? '✅ Definida' : '❌ Indefinida'}`, process.env.VITE_SUPABASE_URL ? colors.green : colors.red);
-  log(`   VITE_SUPABASE_ANON_KEY: ${process.env.VITE_SUPABASE_ANON_KEY ? '✅ Definida' : '❌ Indefinida'}`, process.env.VITE_SUPABASE_ANON_KEY ? colors.green : colors.red);
+server.listen(PORT, () => {
+  log(`Servidor rodando em: http://localhost:${PORT}`, colors.green);
+  log(`Modo: Produção (servindo arquivos estáticos da pasta dist)`, colors.cyan);
   
-  log('\n💻 Este ambiente simula:');
-  log('   1. Injeção de variáveis de ambiente como window.ENV');
-  log('   2. Regras de rewrite do Vercel');
-  log('   3. Servir assets de múltiplos diretórios');
-  log('   4. Fallback para index.html');
-  
-  log('\n📝 Para testar:');
-  log('   1. Abra http://localhost:5173 no navegador');
-  log('   2. Verifique o console do navegador para confirmar que as variáveis de ambiente foram carregadas');
-  log('   3. Verifique se os assets estão sendo carregados corretamente');
+  // Abrir automaticamente o navegador no Linux
+  exec(`xdg-open http://localhost:${PORT}`);
 });
+
+// Exibir informações sobre o processo
+log(`ID do Processo: ${process.pid}`, colors.gray);
+log(`Para encerrar o servidor, pressione Ctrl+C\n`, colors.gray);

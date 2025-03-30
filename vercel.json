@@ -4,10 +4,6 @@
   "buildCommand": "node vercel-cleanup.js && npm run build",
   "outputDirectory": "dist",
   "public": true,
-  "rewrites": [
-    { "source": "/api/healthcheck", "destination": "/api/healthcheck.js" },
-    { "source": "/api/(.*)", "destination": "/api/$1.js" }
-  ],
   "cleanUrls": true,
   "trailingSlash": false,
   "headers": [
@@ -27,18 +23,10 @@
       ]
     }
   ],
-  "routes": [
-    { 
-      "src": "/api/(.*)", 
-      "dest": "/api/$1.js" 
-    },
-    { 
-      "handle": "filesystem"
-    },
-    { 
-      "src": "/(.*)", 
-      "dest": "/public/index.html" 
-    }
+  "rewrites": [
+    { "source": "/api/healthcheck", "destination": "/api/healthcheck.js" },
+    { "source": "/api/(.*)", "destination": "/api/$1.js" },
+    { "source": "/(.*)", "destination": "/index.html" }
   ],
   "env": {
     "NODE_ENV": "production",
