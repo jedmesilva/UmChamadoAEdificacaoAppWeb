@@ -85,6 +85,13 @@ Se encontrar problemas ao fazer o deploy, verifique:
    - Verifique se a versão do Node.js está correta no painel do Vercel em Project Settings > General > Node.js Version
    - Se necessário, execute `node vercel-node-version-check.js` para verificar compatibilidade
 
+6. **Renderização do Frontend**
+   - Se o seu deploy estiver mostrando código-fonte em vez do site renderizado:
+     - Verifique se o diretório de saída está configurado como `dist` no Vercel
+     - Confirme que o arquivo `vercel.json` tem as configurações corretas de rotas e rewrites
+     - Verifique se a estrutura de build está correta com o frontend em `/public/index.html`
+   - Para testar se o servidor estático está funcionando, acesse `/static-index.html`
+
 ## Melhorias Futuras
 
 Recomendações para desenvolvedores que desejam melhorar o processo de deploy:

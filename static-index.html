@@ -1,166 +1,102 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Diagnóstico de Ambiente Vercel</title>
-  <script>
-    // Variáveis de ambiente para Supabase (serão injetadas pela Vercel)
-    window.ENV = {
-      VITE_SUPABASE_URL: "https://mizihlfmbcfgomlutiss.supabase.co",
-      VITE_SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1pemlobGZtYmNmZ29tbHV0aXNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI5MDA0MjYsImV4cCI6MjA1ODQ3NjQyNn0.4AkfkgtPzFwvAIfZFCT8LxxK2mIk9hgXiwbfvBthzRQ"
-    };
-    console.log("ENV carregado:", window.ENV);
-  </script>
-  <style>
-    body { font-family: system-ui, sans-serif; line-height: 1.5; max-width: 800px; margin: 0 auto; padding: 1rem; }
-    h1 { color: #1a365d; margin-bottom: 1rem; }
-    .card { border: 1px solid #e2e8f0; border-radius: 0.5rem; padding: 1rem; margin-bottom: 1rem; }
-    button { background: #3182ce; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.25rem; cursor: pointer; }
-    button:hover { background: #2c5282; }
-    pre { background: #f7fafc; padding: 1rem; border-radius: 0.25rem; overflow-x: auto; font-size: 0.875rem; }
-    .success { color: #38a169; }
-    .error { color: #e53e3e; }
-  </style>
-</head>
-<body>
-  <h1>Diagnóstico de Ambiente Vercel</h1>
-  
-  <div class="card">
-    <h2>Verificação de Variáveis de Ambiente</h2>
-    <p>Testando a disponibilidade das variáveis críticas:</p>
-    <pre id="env-output">Verificando...</pre>
-    <button onclick="checkEnv()">Testar Variáveis</button>
-  </div>
-  
-  <div class="card">
-    <h2>Teste de Conexão com Supabase</h2>
-    <p>Verificando a conectividade com o Supabase:</p>
-    <pre id="supabase-output">Aguardando teste...</pre>
-    <button onclick="testSupabase()">Testar Conectividade</button>
-  </div>
-  
-  <div class="card">
-    <h2>Verificação de Caminhos de Assets</h2>
-    <p>Testando resolução de caminhos de arquivos:</p>
-    <pre id="paths-output">Aguardando verificação...</pre>
-    <button onclick="checkPaths()">Verificar Caminhos</button>
-  </div>
-  
-  <script>
-    // Função para verificar variáveis de ambiente
-    function checkEnv() {
-      const output = document.getElementById('env-output');
-      try {
-        const env = window.ENV || {};
-        const result = [
-          'Verificação de Variáveis:',
-          '------------------------',
-          'window.ENV existe? ' + (window.ENV ? 'Sim' : 'Não'),
-          'VITE_SUPABASE_URL: ' + (env.VITE_SUPABASE_URL || 'Não definido'),
-          'VITE_SUPABASE_ANON_KEY: ' + (env.VITE_SUPABASE_ANON_KEY ? 'Definido (valor oculto)' : 'Não definido'),
-          '',
-          'window.origin: ' + window.location.origin,
-          'pathname: ' + window.location.pathname
-        ].join('\n');
-        
-        output.textContent = result;
-        output.className = window.ENV?.VITE_SUPABASE_URL ? 'success' : 'error';
-      } catch (err) {
-        output.textContent = 'Erro: ' + err.message;
-        output.className = 'error';
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Um Chamado à Edificação - Versão Estática</title>
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+      body {
+        font-family: 'Inter', sans-serif;
+        margin: 0;
+        padding: 20px;
+        background-color: #f8f9fa;
+        color: #333;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
       }
-    }
-    
-    // Iniciar verificação automática
-    checkEnv();
-    
-    // Função para testar conexão com Supabase
-    async function testSupabase() {
-      const output = document.getElementById('supabase-output');
-      output.textContent = 'Conectando...';
+      main {
+        max-width: 800px;
+        background-color: white;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      }
+      h1 {
+        font-family: 'Merriweather', serif;
+        color: #1a365d;
+        margin-bottom: 20px;
+      }
+      p {
+        line-height: 1.6;
+        margin-bottom: 15px;
+      }
+      .header {
+        text-align: center;
+        margin-bottom: 30px;
+      }
+      .footer {
+        text-align: center;
+        margin-top: 40px;
+        font-size: 0.9rem;
+        color: #666;
+      }
+      .status {
+        background-color: #e9f5fe;
+        border-left: 4px solid #3498db;
+        padding: 15px;
+        margin: 20px 0;
+        border-radius: 0 4px 4px 0;
+      }
+      .status h2 {
+        margin-top: 0;
+        color: #2980b9;
+      }
+      .api-link {
+        display: inline-block;
+        margin-top: 5px;
+        color: #3498db;
+        text-decoration: none;
+      }
+      .api-link:hover {
+        text-decoration: underline;
+      }
+    </style>
+    <meta name="description" content="Um Chamado à Edificação - Cartas semanais para o despertar dos edificadores" />
+  </head>
+  <body>
+    <main>
+      <div class="header">
+        <h1>Um Chamado à Edificação</h1>
+        <p>Versão estática para verificação de implantação</p>
+      </div>
       
-      try {
-        // Carregar o Supabase de um CDN para este teste
-        const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
-        script.onload = async () => {
-          try {
-            const { createClient } = window.supabase;
-            
-            if (!window.ENV?.VITE_SUPABASE_URL || !window.ENV?.VITE_SUPABASE_ANON_KEY) {
-              throw new Error('Variáveis de ambiente do Supabase não estão definidas');
-            }
-            
-            const supabase = createClient(
-              window.ENV.VITE_SUPABASE_URL,
-              window.ENV.VITE_SUPABASE_ANON_KEY
-            );
-            
-            output.textContent = 'Cliente Supabase criado, tentando fazer consulta...';
-            
-            // Teste de consulta simples
-            const { data, error } = await supabase
-              .from('cartas_um_chamado_a_edificacao')
-              .select('id')
-              .limit(1);
-            
-            if (error) throw error;
-            
-            output.textContent = 'Conexão com Supabase estabelecida com sucesso!\n' + 
-                                'Dados recebidos: ' + JSON.stringify(data);
-            output.className = 'success';
-          } catch (err) {
-            output.textContent = 'Erro ao conectar: ' + err.message;
-            output.className = 'error';
-          }
-        };
-        
-        script.onerror = () => {
-          output.textContent = 'Erro ao carregar a biblioteca Supabase';
-          output.className = 'error';
-        };
-        
-        document.head.appendChild(script);
-      } catch (err) {
-        output.textContent = 'Erro: ' + err.message;
-        output.className = 'error';
-      }
-    }
-    
-    // Função para verificar caminhos de assets
-    async function checkPaths() {
-      const output = document.getElementById('paths-output');
-      output.textContent = 'Verificando caminhos...';
+      <p>
+        Bem-vindo à versão estática da página "Um Chamado à Edificação". Esta página é usada para verificar se o ambiente de hospedagem está funcionando corretamente.
+      </p>
       
-      try {
-        // Lista de caminhos para verificar
-        const paths = [
-          '/assets/index.js',
-          '/assets/index.css',
-          '/public/assets/index.js',
-          '/public/assets/index.css',
-          '/index.js',
-          '/index.css'
-        ];
-        
-        const results = [];
-        
-        for (const path of paths) {
-          try {
-            const response = await fetch(path, { method: 'HEAD' });
-            results.push(`${path}: ${response.ok ? 'Acessível' : 'Não encontrado (status: ' + response.status + ')'}`);
-          } catch (e) {
-            results.push(`${path}: Erro ao acessar (${e.message})`);
-          }
-        }
-        
-        output.textContent = results.join('\n');
-      } catch (err) {
-        output.textContent = 'Erro: ' + err.message;
-        output.className = 'error';
-      }
-    }
-  </script>
-</body>
+      <div class="status">
+        <h2>Status do Ambiente</h2>
+        <p>Esta página está sendo servida corretamente a partir dos arquivos estáticos.</p>
+        <p>Para verificar o status da API, acesse:</p>
+        <a href="/api/healthcheck" class="api-link">/api/healthcheck</a> - Informações do ambiente<br>
+        <a href="/api/supabase-status" class="api-link">/api/supabase-status</a> - Status da conexão com o Supabase
+      </div>
+      
+      <p>
+        Se você está vendo esta página, significa que o servidor está configurado para servir corretamente arquivos estáticos. 
+        A aplicação completa deve estar disponível em breve se todos os componentes estiverem funcionando adequadamente.
+      </p>
+      
+      <div class="footer">
+        <p>© 2025 Um Chamado à Edificação</p>
+      </div>
+    </main>
+  </body>
 </html>
