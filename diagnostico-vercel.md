@@ -1,65 +1,100 @@
-# Diagnóstico de Problemas no Deploy da Vercel
+# Diagnóstico de Implantação Vercel
 
-Este documento registra os problemas encontrados no deploy da aplicação na Vercel e as soluções implementadas.
+## Visão Geral da Implantação
+Este documento fornece um diagnóstico completo e orientações para implantação do aplicativo na Vercel. A aplicação é um projeto React que utiliza Supabase para backend/autenticação.
 
-## Problemas Identificados
+## Estrutura da Aplicação Atual
+```
+.
+├── api/                          # Serverless functions para Vercel
+│   ├── healthcheck.js            # Verificação básica de saúde da aplicação
+│   ├── supabase-status.js        # Verificação do status da conexão Supabase
+│   └── diagnostico.js            # Diagnóstico detalhado da aplicação
+├── client/                       # Aplicação React frontend
+│   ├── public/                   # Arquivos estáticos
+│   ├── src/                      # Código fonte React
+│   │   ├── components/           # Componentes React
+│   │   ├── hooks/                # Custom hooks React
+│   │   ├── lib/                  # Utilitários e serviços
+│   │   │   ├── supabase.ts       # Cliente Supabase
+│   │   │   └── vercel-env.ts     # Gestão de variáveis de ambiente
+│   │   ├── pages/                # Páginas da aplicação
+│   │   ├── App.tsx               # Componente principal
+│   │   └── main.tsx              # Ponto de entrada da aplicação
+│   └── index.html                # Template HTML base
+├── server/                       # Código do servidor Express
+├── shared/                       # Código compartilhado entre frontend e backend
+│   └── schema.ts                 # Definições de esquema/tipos
+├── vercel.json                   # Configuração da Vercel
+└── vercel-build-simple.mjs       # Script de build para Vercel
+```
 
-1. **Falha no carregamento da aplicação principal**
-   - A aplicação não está carregando corretamente após o deploy na Vercel
-   - Possíveis causas:
-     - Rotas não configuradas corretamente
-     - Assets não encontrados
-     - Variáveis de ambiente não disponíveis
-     - Erro no middleware ou configuração do Express
-     - Formato incorreto dos headers no arquivo `vercel.json`
-     - Estrutura de diretórios incompatível com a esperada
+## Variáveis de Ambiente Necessárias
+| Variável | Descrição | Obrigatória |
+|----------|-----------|------------|
+| `VITE_SUPABASE_URL` | URL da sua instância Supabase | Sim |
+| `VITE_SUPABASE_ANON_KEY` | Chave anônima do Supabase | Sim |
+| `STORAGE_TYPE` | Tipo de armazenamento (definido como "supabase") | Sim |
 
-2. **Verificação de API e Variáveis de Ambiente**
-   - O endpoint `/api/healthcheck` foi criado para verificar o status da API e a presença das variáveis de ambiente
-   - Resultados mostram que as variáveis de ambiente estão configuradas corretamente
-   - Testes adicionais com `/api/supabase-status` confirmam que o Supabase está acessível
+## Configuração de Implantação
 
-## Soluções Implementadas
+### Configuração Vercel Atual 
+A configuração atual do `vercel.json` inclui:
 
-### 1. Script de Build Personalizado (vercel-build.mjs)
+1. **buildCommand**: `node vercel-build-simple.mjs` - Executa o script personalizado de build
+2. **outputDirectory**: `dist` - Diretório onde os arquivos de build são gerados
+3. **Rotas**:
+   - Configurações para API serverless
+   - Rota para arquivos estáticos
+   - Fallback para SPA (Single Page Application)
+4. **Headers**: 
+   - Headers CORS para acesso à API
+   - Cache-Control para ativos estáticos
 
-Um script de build personalizado foi aprimorado para:
-- Garantir que os assets estejam no local correto
-- Copiar arquivos estáticos necessários
-- Criar um arquivo `healthcheck.json` para diagnóstico rápido
-- Gerar uma página `static-index.html` como fallback
-- **NOVO**: Copiar recursivamente a pasta `client` para o diretório de saída
-- **NOVO**: Criar arquivos HTML de roteamento em subdiretórios client/*
-- **NOVO**: Injetar variáveis de ambiente diretamente nos arquivos HTML
+### Script de Build
+O arquivo `vercel-build-simple.mjs` gerencia o processo de build personalizado:
 
-### 2. Configuração de Vercel Atualizada (vercel.json)
+1. Executa o build padrão com npm
+2. Copia os arquivos necessários para o diretório dist
+3. Configura corretamente as rotas para API serverless
+4. Cria um arquivo de diagnóstico para debug
 
-O arquivo `vercel.json` foi atualizado com:
-- Rotas específicas para a API e assets
-- **NOVO**: Correção do formato dos headers (usando `src` ao invés de `source`)
-- **NOVO**: Rota específica para `/client/*` e rota específica para a raiz (`^/$`)
-- Configurações de cabeçalhos CORS
-- Definição de variáveis de ambiente
+## Checklist de Implantação
+- [x] Definir variáveis de ambiente na plataforma Vercel
+- [x] Verificar se o script de build está configurado corretamente
+- [x] Garantir que o diretório de saída (`dist`) esteja definido corretamente
+- [x] Configurar rotas corretamente para um SPA React
+- [x] Configurar endpoints de API serverless
+- [x] Configurar gerenciamento de variáveis de ambiente no frontend
 
-### 3. Páginas de Diagnóstico e Fallback
+## Solução de Problemas Comuns
 
-Foram criadas/aprimoradas:
-- Uma página de diagnóstico estática (`static-index.html`)
-- Um endpoint de API para verificação de saúde (`/api/healthcheck`)
-- **NOVO**: Endpoint para verificar status do Supabase (`/api/supabase-status`)
-- **NOVO**: Página principal de fallback (`index.html`) com lógica inteligente para:
-  - Detectar possíveis localizações de assets
-  - Testar múltiplos pontos de entrada
-  - Fornecer diagnóstico detalhado em caso de falha
-  - Fazer redirect automático para a aplicação principal quando encontrada
+### Página em Branco / "Cannot GET /"
+- **Causa**: Configuração incorreta de rotas no vercel.json
+- **Solução**: Verificar se existe uma rota de fallback para SPA: `{ "src": "/(.*)", "dest": "/index.html" }`
 
-## Próximos Passos
+### Variáveis de Ambiente não disponíveis no Frontend
+- **Causa**: Configuração incorreta do cliente Vite/React
+- **Solução**: Verificar o arquivo `client/src/lib/vercel-env.ts` e garantir que as variáveis estejam sendo acessadas corretamente
 
-1. Verificar logs na Vercel para identificar erros específicos
-2. Testar diferentes configurações de roteamento
-3. Verificar se todos os assets estão sendo servidos corretamente
-4. **NOVO**: Verificar a resposta do endpoint `/api/supabase-status` para confirmar:
-   - Se as variáveis de ambiente do Supabase estão corretamente configuradas
-   - Se o Supabase está respondendo às requisições
-   - Se há problemas de CORS ou networking afetando a comunicação
-5. **NOVO**: Avaliar a estrutura de pastas no build final da Vercel usando os arquivos de diagnóstico
+### API serverless não funciona
+- **Causa**: Configuração incorreta de endpoints serverless
+- **Solução**: Verificar configuração no vercel.json e certifique-se de que os arquivos na pasta /api/ têm a extensão .js
+
+### Carregamento Incorreto de Ativos (CSS/JS)
+- **Causa**: Caminhos de importação absolutos incorretos
+- **Solução**: Todos os paths no HTML precisam ser relativos ou baseados em URL
+
+## URLs de Diagnóstico
+Após a implantação, você pode verificar o status da aplicação usando estas URLs:
+
+- `/api/healthcheck` - Verificação básica do servidor
+- `/api/supabase-status` - Verificação da conexão Supabase
+- `/api/diagnostico` - Diagnóstico detalhado da aplicação
+
+## Melhores Práticas para a Vercel
+1. **Estrutura de Projeto**: Idealmente, mova a aplicação React para a raiz, use /public para assets estáticos e /api para funções serverless
+2. **Variáveis de Ambiente**: Use o sistema de variáveis de ambiente da Vercel
+3. **Deployments Preview**: Utilize previews para cada pull request
+4. **Monitoramento**: Configure monitoramento e alertas
+5. **Domínios Personalizados**: Configure domínios personalizados conforme necessário

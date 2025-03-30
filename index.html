@@ -5,11 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Um Chamado à Edificação</title>
   <script>
-    // Injetar as variáveis de ambiente diretamente
+    // Definir variáveis de ambiente para o client
     window.ENV = {
-      VITE_SUPABASE_URL: "https://mizihlfmbcfgomlutiss.supabase.co",
-      VITE_SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1pemlobGZtYmNmZ29tbHV0aXNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI5MDA0MjYsImV4cCI6MjA1ODQ3NjQyNn0.4AkfkgtPzFwvAIfZFCT8LxxK2mIk9hgXiwbfvBthzRQ"
+      VITE_SUPABASE_URL: "__VITE_SUPABASE_URL__",
+      VITE_SUPABASE_ANON_KEY: "__VITE_SUPABASE_ANON_KEY__"
     };
+    
+    // Substituir marcadores por valores reais se disponíveis via Vercel
+    if (typeof window.__NEXT_DATA__ !== 'undefined' && window.__NEXT_DATA__.env) {
+      const env = window.__NEXT_DATA__.env;
+      if (env.VITE_SUPABASE_URL) window.ENV.VITE_SUPABASE_URL = env.VITE_SUPABASE_URL;
+      if (env.VITE_SUPABASE_ANON_KEY) window.ENV.VITE_SUPABASE_ANON_KEY = env.VITE_SUPABASE_ANON_KEY;
+    }
+    
+    // Fallback para valores codificados
+    if (window.ENV.VITE_SUPABASE_URL === "__VITE_SUPABASE_URL__") {
+      window.ENV.VITE_SUPABASE_URL = "https://mizihlfmbcfgomlutiss.supabase.co";
+    }
+    if (window.ENV.VITE_SUPABASE_ANON_KEY === "__VITE_SUPABASE_ANON_KEY__") {
+      window.ENV.VITE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1pemlobGZtYmNmZ29tbHV0aXNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI5MDA0MjYsImV4cCI6MjA1ODQ3NjQyNn0.4AkfkgtPzFwvAIfZFCT8LxxK2mIk9hgXiwbfvBthzRQ";
+    }
+    
     console.log("ENV carregado:", window.ENV);
   </script>
   <style>
@@ -80,121 +96,68 @@
       100% { transform: rotate(360deg); }
     }
   </style>
+  <link rel="icon" href="/favicon.ico" />
 </head>
 <body>
-  <div class="container">
-    <div id="loading">
-      <div class="loading-spinner"></div>
-      <h1>Um Chamado à Edificação</h1>
-      <p>Carregando a aplicação...</p>
-      <div class="info">Se a aplicação não carregar em alguns segundos, <br>verifique se JavaScript está habilitado no seu navegador.</div>
-    </div>
-    
-    <div id="error" style="display: none;">
-      <h1>Um Chamado à Edificação</h1>
-      <p>Ocorreu um problema ao carregar a aplicação.</p>
-      <a href="/" class="button">Tentar Novamente</a>
-      <div class="error-message" id="error-details"></div>
-      <div class="info">
-        <p>Opções de diagnóstico:</p>
-        <a href="/api/healthcheck">Verificar Status da API</a> | 
-        <a href="/static-index.html">Página de Diagnóstico</a>
-      </div>
-    </div>
+  <div id="root"></div>
+  <div class="container" id="loading">
+    <div class="loading-spinner"></div>
+    <h1>Um Chamado à Edificação</h1>
+    <p>Carregando a aplicação...</p>
+    <div class="info">Se a aplicação não carregar em alguns segundos, <br>verifique se JavaScript está habilitado no seu navegador.</div>
   </div>
-
+  
+  <script type="module" src="/assets/index.js"></script>
+  
   <script>
-    // Função para verificar se a URL existe
-    async function checkUrl(url) {
-      try {
-        const response = await fetch(url, { method: 'HEAD' });
-        return response.ok;
-      } catch (e) {
-        return false;
-      }
-    }
-    
-    // Opções de assets para tentar
-    const possibleAssets = [
-      '/assets/index.js',
-      '/client/assets/index.js',
-      '/client/src/main.js',
-      '/client/dist/assets/index.js',
-      '/index.js'
-    ];
-    
-    // Possíveis pontos de entrada
-    const possibleEntries = [
-      '/client/index.html',
-      '/client/dist/index.html',
-      '/dist/index.html'
-    ];
-    
-    // Função para carregar o script principal
-    async function loadMainScript() {
-      for (const asset of possibleAssets) {
-        if (await checkUrl(asset)) {
-          console.log(`Script encontrado em: ${asset}`);
-          const script = document.createElement('script');
-          script.src = asset;
-          script.type = 'module';
-          script.onload = () => {
-            console.log(`Script carregado com sucesso: ${asset}`);
-            window.appLoaded = true;
-          };
-          script.onerror = (e) => {
-            console.error(`Erro ao carregar script: ${asset}`, e);
-          };
-          document.body.appendChild(script);
-          return true;
+    // Esconder o loader quando a aplicação carregar
+    window.appLoaded = false;
+    window.addEventListener('DOMContentLoaded', () => {
+      setTimeout(() => {
+        if (document.getElementById('root').children.length > 0) {
+          document.getElementById('loading').style.display = 'none';
+          window.appLoaded = true;
         }
-      }
-      return false;
-    }
+      }, 500);
+    });
     
-    // Função para redirecionar para o ponto de entrada principal
-    async function redirectToMainEntry() {
-      for (const entry of possibleEntries) {
-        if (await checkUrl(entry)) {
-          console.log(`Ponto de entrada encontrado em: ${entry}`);
-          window.location.href = entry;
-          return true;
-        }
-      }
-      return false;
-    }
-    
-    // Verificar se conseguimos carregar o principal ou redirecionar
-    async function tryLoadApp() {
-      // Primeiro tentar carregar o script
-      const scriptLoaded = await loadMainScript();
-      
-      // Se não conseguir carregar o script, tentar redirecionar
-      if (!scriptLoaded) {
-        const redirected = await redirectToMainEntry();
+    // Verificar se a aplicação carregou após um tempo
+    setTimeout(() => {
+      if (!window.appLoaded) {
+        // Tentar carregar novamente o script
+        const script = document.createElement('script');
+        script.type = 'module';
+        script.src = '/assets/index.js';
+        document.body.appendChild(script);
         
-        // Se não conseguir redirecionar, mostrar erro após 3 segundos
-        if (!redirected) {
-          setTimeout(() => {
-            document.getElementById('loading').style.display = 'none';
-            document.getElementById('error').style.display = 'block';
-            
-            // Incluir detalhes de diagnóstico
-            document.getElementById('error-details').innerHTML = `
-              Detalhes técnicos:<br>
-              URL: ${window.location.href}<br>
-              Variáveis: ${window.ENV ? 'Disponíveis' : 'Não disponíveis'}<br>
-              Timestamp: ${new Date().toISOString()}<br>
-              Assets testados: ${possibleAssets.join(', ')}<br>
-              Entradas testadas: ${possibleEntries.join(', ')}
+        // Se ainda não carregou após mais um tempo, mostrar diagnóstico
+        setTimeout(() => {
+          if (!window.appLoaded && document.getElementById('root').children.length === 0) {
+            // Criar elemento de diagnóstico
+            const errorDiv = document.createElement('div');
+            errorDiv.classList.add('container');
+            errorDiv.innerHTML = `
+              <h1>Um Chamado à Edificação</h1>
+              <p>Ocorreu um problema ao carregar a aplicação.</p>
+              <a href="/" class="button">Tentar Novamente</a>
+              <div class="error-message">
+                Detalhes técnicos:<br>
+                URL: ${window.location.href}<br>
+                Variáveis de ambiente: ${JSON.stringify(window.ENV || {})}<br>
+                Timestamp: ${new Date().toISOString()}<br>
+              </div>
+              <div class="info">
+                <p>Opções de diagnóstico:</p>
+                <a href="/api/healthcheck">Verificar Status da API</a> | 
+                <a href="/api/supabase-status">Verificar Status do Supabase</a>
+              </div>
             `;
-          }, 3000);
-        }
+            document.body.appendChild(errorDiv);
+            document.getElementById('loading').style.display = 'none';
+          }
+        }, 3000);
       }
-    }
-    
-    // Iniciar processo de carregamento
-    tryLoadApp();
+    }, 2000);
   </script>
 </body>
 </html>

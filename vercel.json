@@ -1,29 +1,23 @@
 
 {
   "version": 2,
-  "buildCommand": "node vercel-build.mjs",
+  "buildCommand": "node vercel-build-simple.mjs",
   "outputDirectory": "dist",
   "routes": [
-    { "src": "/api/healthcheck", "dest": "/api/healthcheck.mjs" },
-    { "src": "/api/supabase-status", "dest": "/api/supabase-status.mjs" }, 
-    { "src": "/api/(.*)", "dest": "/api/$1.mjs" },
+    { "src": "/api/healthcheck", "dest": "/api/healthcheck.js" },
+    { "src": "/api/supabase-status", "dest": "/api/supabase-status.js" },
+    { "src": "/api/diagnostico", "dest": "/api/diagnostico.js" },
+    { "src": "/api/(.*)", "dest": "/api/$1.js" },
     { "src": "/assets/(.*)", "dest": "/assets/$1" },
-    { "src": "/client/(.*)", "dest": "/client/$1" },
-    { "src": "/static-index.html", "dest": "/static-index.html" },
-    { "src": "/healthcheck.json", "dest": "/healthcheck.json" },
-    { "src": "^/$", "dest": "/client/index.html" },
     { "src": "/(.*)", "dest": "/index.html" }
   ],
-  "cleanUrls": true,
-  "trailingSlash": false,
   "headers": [
     {
       "src": "/(.*)",
       "headers": [
         { "key": "Access-Control-Allow-Origin", "value": "*" },
         { "key": "Access-Control-Allow-Methods", "value": "GET,OPTIONS,PATCH,DELETE,POST,PUT" },
-        { "key": "Access-Control-Allow-Headers", "value": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization" },
-        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
+        { "key": "Access-Control-Allow-Headers", "value": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization" }
       ]
     },
     {

@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { getEnvVariable } from './vercel-env';
 
 // Adicionar tipagem para o objeto ENV global na window
 declare global {
@@ -9,24 +10,6 @@ declare global {
       [key: string]: string | undefined;
     };
   }
-}
-
-// Obter as variáveis de ambiente de múltiplas fontes possíveis
-function getEnvVariable(key: string): string {
-  // Tentar obter da janela primeiro (fallback para produção)
-  if (typeof window !== 'undefined' && window.ENV && window.ENV[key]) {
-    const value = window.ENV[key] || '';
-    // Substituir os placeholders se necessário
-    return value.startsWith('%') && value.endsWith('%') ? '' : value;
-  }
-  
-  // Tentar obter das variáveis de ambiente do Vite
-  if (import.meta.env && import.meta.env[key]) {
-    return import.meta.env[key] as string;
-  }
-  
-  // Fallback
-  return '';
 }
 
 // Obter as variáveis de ambiente do Supabase
