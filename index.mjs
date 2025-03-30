@@ -1,5 +1,5 @@
-// index.js - Handler simplificado para a rota raiz
-module.exports = function handler(req, res) {
+// index.mjs - Handler simplificado para a rota raiz
+export default function handler(req, res) {
   try {
     // Log da requisição recebida
     console.log(`Requisição recebida: ${req.method} ${req.url}`);

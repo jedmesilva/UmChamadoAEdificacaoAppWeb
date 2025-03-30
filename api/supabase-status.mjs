@@ -1,9 +1,4 @@
 export default async function handler(req, res) {
-  // CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
   // Verifica se as variáveis de ambiente estão definidas
   const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
   const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || '';
@@ -51,7 +46,6 @@ export default async function handler(req, res) {
       available: supabaseAvailable,
       latency: supabaseLatency,
       error: supabaseError
-    },
-    deployment: 'Vercel Serverless Function'
+    }
   });
 }

@@ -47,12 +47,6 @@ coverage/
 tmp/
 temp/
 
-# Arquivos com conflito
-api/healthcheck.mjs
-api/index.mjs
-api/diagnostico.mjs
-api/supabase-status.mjs
-
 # Outros arquivos específicos do projeto
 attached_assets/
 README.md

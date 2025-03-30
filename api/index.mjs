@@ -1,15 +1,16 @@
-// API principal para Vercel Serverless
-// Configurado para funcionar em ambiente serverless da Vercel
+// API principal em formato ESM para Vercel Serverless
+// Este arquivo está configurado com "type": "module" no package.json
+// e é destinado a funcionar em ambiente serverless da Vercel
 
-// Importações CommonJS
-const { createClient } = require('@supabase/supabase-js');
+// Usando exclusivamente importações ESM para evitar problemas com "require"
+import { createClient } from '@supabase/supabase-js';
 
 /**
  * Handler principal para funções serverless da API no Vercel
  * @param {Object} req - Objeto de requisição
  * @param {Object} res - Objeto de resposta
  */
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   // Configuração CORS 
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');

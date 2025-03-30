@@ -22,8 +22,7 @@ export default function handler(req, res) {
       is_vercel: !!process.env.VERCEL,
       vercel_env: process.env.VERCEL_ENV || 'não definido',
       region: process.env.VERCEL_REGION || 'não definido'
-    },
-    deployment: 'Vercel Serverless Function'
+    }
   };
   
   // Responder com as informações coletadas

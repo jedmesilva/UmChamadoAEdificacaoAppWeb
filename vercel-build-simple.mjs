@@ -1,82 +1,87 @@
+#!/usr/bin/env node
 /**
- * Script de construção mais simples para o ambiente Vercel
- * 
- * Este script simplifica o processo de build para Vercel, utilizando
- * o modo padrão de construção das ferramentas.
+ * Script de build simplificado para implantação na Vercel.
+ * Este script prepara o ambiente de produção com configurações otimizadas.
  */
 
 import { execSync } from 'child_process';
-import fs from 'fs';
+import { promises as fs } from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-console.log('🔨 Iniciando processo de build simplificado para Vercel');
-
-try {
-  // 1. Executando build do projeto
-  console.log('📦 Compilando o projeto...');
-  execSync('npm run build', { stdio: 'inherit' });
-  console.log('✅ Build do projeto concluído com sucesso!');
-
-  // 2. Verificando diretório dist
-  const distDir = path.join(__dirname, 'dist');
-  if (!fs.existsSync(distDir)) {
-    console.error('❌ Diretório "dist" não encontrado após o build!');
+async function main() {
+  try {
+    console.log('🚀 Iniciando build para Vercel...');
+    
+    // 1. Build padrão com npm
+    console.log('📦 Executando build padrão...');
+    execSync('npm run build', { stdio: 'inherit' });
+    
+    // 2. Verificar se a pasta dist existe
+    const distExists = await fs.access('dist').then(() => true).catch(() => false);
+    
+    if (!distExists) {
+      console.error('❌ Pasta dist não foi criada durante o build.');
+      process.exit(1);
+    }
+    
+    // 3. Copiar os arquivos necessários para a pasta dist
+    console.log('📋 Copiando arquivos para dist...');
+    
+    // 3.1 Criar arquivos API específicos para Vercel
+    const apiDir = path.join('dist', 'api');
+    await fs.mkdir(apiDir, { recursive: true });
+    
+    // Verificar se há arquivos API disponíveis
+    if (await fs.access('api').then(() => true).catch(() => false)) {
+      const apiFiles = await fs.readdir('api');
+      
+      for (const file of apiFiles) {
+        if (file.endsWith('.js') || file.endsWith('.mjs')) {
+          const source = path.join('api', file);
+          const dest = path.join(apiDir, file.replace('.mjs', '.js'));
+          
+          await fs.copyFile(source, dest);
+          console.log(`  - Copiado ${source} para ${dest}`);
+        }
+      }
+    }
+    
+    // 3.2 Garantir que o index.html esteja na raiz da dist
+    if (await fs.access('index.html').then(() => true).catch(() => false)) {
+      await fs.copyFile('index.html', path.join('dist', 'index.html'));
+      console.log('  - Copiado index.html para dist/index.html');
+    }
+    
+    // 4. Criar o arquivo healthcheck.json para diagnóstico
+    const healthcheck = {
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      build: {
+        env: {
+          node_env: process.env.NODE_ENV,
+          supabase_url_set: !!process.env.VITE_SUPABASE_URL,
+          supabase_anon_key_set: !!process.env.VITE_SUPABASE_ANON_KEY,
+          storage_type: process.env.STORAGE_TYPE
+        }
+      },
+      vercel: {
+        is_vercel: !!process.env.VERCEL,
+        vercel_env: process.env.VERCEL_ENV || 'não definido',
+        region: process.env.VERCEL_REGION || 'não definido'
+      }
+    };
+    
+    await fs.writeFile(
+      path.join('dist', 'healthcheck.json'), 
+      JSON.stringify(healthcheck, null, 2)
+    );
+    console.log('  - Criado healthcheck.json para diagnóstico');
+    
+    console.log('✅ Build concluído com sucesso!');
+  } catch (error) {
+    console.error('❌ Erro durante o build:', error);
     process.exit(1);
   }
-
-  // 3. Verificando arquivos importantes
-  console.log('🔍 Verificando arquivos essenciais...');
-  
-  // 3.1 Arquivos do frontend
-  const publicDir = path.join(distDir, 'public');
-  if (!fs.existsSync(publicDir)) {
-    console.log('⚠️ Diretório "dist/public" não encontrado!');
-  } else {
-    ['index.html', 'assets'].forEach(item => {
-      const itemPath = path.join(publicDir, item);
-      if (!fs.existsSync(itemPath)) {
-        console.warn(`⚠️ Item "${item}" não encontrado em dist/public/!`);
-      } else {
-        console.log(`✅ ${item} verificado com sucesso`);
-      }
-    });
-  }
-  
-  // 3.2 Verificar arquivos do servidor
-  const serverFile = path.join(distDir, 'index.js');
-  if (!fs.existsSync(serverFile)) {
-    console.warn('⚠️ Arquivo do servidor "dist/index.js" não encontrado!');
-  } else {
-    console.log('✅ Servidor compilado encontrado');
-  }
-  
-  // 3.3 Verificar arquivos de API (vercel serverless functions)
-  console.log('🔍 Verificando funções da API...');
-  
-  // Verificar se pasta dist/api existe (para funções serverless)
-  const apiDir = path.join(distDir, 'api');
-  if (!fs.existsSync(apiDir)) {
-    // Se não existir, verificar se as APIs originais estão na raiz
-    if (fs.existsSync('api')) {
-      console.log('⚠️ Diretório "api" encontrado na raiz, mas não em "dist/api".');
-      console.log('   Isto pode ser esperado se as APIs forem copiadas depois pelo Vercel.');
-    } else {
-      console.warn('⚠️ Nenhum diretório de API encontrado!');
-    }
-  } else {
-    const apiFiles = fs.readdirSync(apiDir);
-    console.log(`✅ ${apiFiles.length} arquivos de API encontrados em dist/api/`);
-  }
-
-  console.log('✅ Verificação de arquivos concluída!');
-
-  // 4. Exibindo resultado final
-  console.log('🚀 Build simples concluído! Pronto para implantação no Vercel.');
-  
-} catch (error) {
-  console.error('❌ Erro durante o processo de build:', error);
-  process.exit(1);
 }
+
+main();
