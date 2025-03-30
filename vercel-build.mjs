@@ -8,6 +8,23 @@ process.env.STORAGE_TYPE = 'supabase';
 
 console.log('🔨 Iniciando build para Vercel...');
 
+// Verificar variáveis de ambiente críticas
+console.log('Verificando variáveis de ambiente do Supabase...');
+const supabaseUrl = process.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl) {
+  console.warn('⚠️ AVISO: Variável VITE_SUPABASE_URL não está definida!');
+} else {
+  console.log('✅ VITE_SUPABASE_URL está configurada corretamente.');
+}
+
+if (!supabaseAnonKey) {
+  console.warn('⚠️ AVISO: Variável VITE_SUPABASE_ANON_KEY não está definida!');
+} else {
+  console.log('✅ VITE_SUPABASE_ANON_KEY está configurada corretamente.');
+}
+
 try {
   // Executa o build da aplicação
   console.log('📦 Construindo o frontend...');
@@ -98,6 +115,18 @@ try {
   } else if (fs.existsSync('dist/public/index.html')) {
     console.log('Copiando dist/public/index.html para dist/');
     fs.copyFileSync('dist/public/index.html', path.join('dist', 'index.html'));
+    
+    // Corrigir os caminhos dos assets no index.html
+    try {
+      console.log('Corrigindo caminhos dos assets no index.html...');
+      let indexHTML = fs.readFileSync(path.join('dist', 'index.html'), 'utf8');
+      indexHTML = indexHTML.replace(/src="\/assets\//g, 'src="/public/assets/');
+      indexHTML = indexHTML.replace(/href="\/assets\//g, 'href="/public/assets/');
+      fs.writeFileSync(path.join('dist', 'index.html'), indexHTML);
+      console.log('Caminhos corrigidos com sucesso.');
+    } catch (err) {
+      console.error('Erro ao corrigir caminhos dos assets:', err);
+    }
   } else if (fs.existsSync('client/index.html')) {
     console.log('Copiando client/index.html para dist/');
     fs.copyFileSync('client/index.html', path.join('dist', 'index.html'));
@@ -153,6 +182,12 @@ try {
   if (!fs.existsSync('dist/assets')) {
     console.log('Criando diretório dist/assets...');
     fs.mkdirSync('dist/assets', { recursive: true });
+  }
+  
+  // Garantir que dist/public/assets existe para uso pelo Vercel
+  if (!fs.existsSync('dist/public/assets')) {
+    console.log('Criando diretório dist/public/assets para garantir compatibilidade com Vercel...');
+    fs.mkdirSync('dist/public/assets', { recursive: true });
   }
   
   console.log('Verificando todas as possíveis localizações de assets...');
@@ -286,6 +321,45 @@ try {
     }
   }
   
+  // Garantir que os assets estão tanto em dist/assets quanto em dist/public/assets
+  if (fs.existsSync('dist/assets') && fs.existsSync('dist/public/assets')) {
+    console.log('Sincronizando assets entre dist/assets e dist/public/assets...');
+    
+    // Copiar de dist/assets para dist/public/assets
+    if (fs.existsSync('dist/assets')) {
+      const assetsFiles = fs.readdirSync('dist/assets');
+      for (const file of assetsFiles) {
+        const srcFile = path.join('dist/assets', file);
+        const destFile = path.join('dist/public/assets', file);
+        
+        if (fs.statSync(srcFile).isFile()) {
+          fs.copyFileSync(srcFile, destFile);
+          console.log(`Copiado para public: ${file}`);
+        } else if (fs.statSync(srcFile).isDirectory()) {
+          fs.cpSync(srcFile, destFile, { recursive: true });
+          console.log(`Copiado diretório para public: ${file}`);
+        }
+      }
+    }
+    
+    // Copiar de dist/public/assets para dist/assets
+    if (fs.existsSync('dist/public/assets')) {
+      const publicAssetsFiles = fs.readdirSync('dist/public/assets');
+      for (const file of publicAssetsFiles) {
+        const srcFile = path.join('dist/public/assets', file);
+        const destFile = path.join('dist/assets', file);
+        
+        if (fs.statSync(srcFile).isFile() && !fs.existsSync(destFile)) {
+          fs.copyFileSync(srcFile, destFile);
+          console.log(`Copiado de public: ${file}`);
+        } else if (fs.statSync(srcFile).isDirectory() && !fs.existsSync(destFile)) {
+          fs.cpSync(srcFile, destFile, { recursive: true });
+          console.log(`Copiado diretório de public: ${file}`);
+        }
+      }
+    }
+  }
+  
   // Listar conteúdo da pasta dist/assets para verificação
   console.log('Verificando conteúdo final de dist/assets:');
   if (fs.existsSync('dist/assets')) {
@@ -298,6 +372,20 @@ try {
     }
   } else {
     console.warn('AVISO: Pasta dist/assets não existe após tentativa de cópia!');
+  }
+  
+  // Listar conteúdo da pasta dist/public/assets para verificação
+  console.log('Verificando conteúdo final de dist/public/assets:');
+  if (fs.existsSync('dist/public/assets')) {
+    try {
+      const assetsFiles = fs.readdirSync('dist/public/assets');
+      console.log(`Conteúdo de dist/public/assets (${assetsFiles.length} itens):`);
+      assetsFiles.forEach(file => console.log(` - ${file}`));
+    } catch (err) {
+      console.error('Erro ao listar conteúdo da pasta dist/public/assets:', err);
+    }
+  } else {
+    console.warn('AVISO: Pasta dist/public/assets não existe após tentativa de cópia!');
   }
 
 
