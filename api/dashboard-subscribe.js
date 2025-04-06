@@ -114,13 +114,54 @@ export default async function handler(req, res) {
       });
     }
     
-    // Se já estiver inscrito, retorna sucesso
+    // Se já estiver inscrito, verifica o status
     if (existingSubscription) {
-      console.log(`Usuário já está inscrito: ${email}`);
+      // Se já tiver o status correto, retorna sucesso
+      if (existingSubscription.status_subscription === 'is_subscription_um_chamado') {
+        console.log(`Usuário já está inscrito com status confirmado: ${email}`);
+        return res.status(200).json({
+          success: true,
+          message: 'Você já está inscrito para receber as cartas por email',
+          subscription: existingSubscription
+        });
+      }
+      
+      // Se não tiver o status correto, atualiza o registro
+      console.log(`Atualizando status da inscrição para: ${email}`);
+      let updateError = null;
+      let updatedSubscription = null;
+      
+      try {
+        const updateResult = await supabase
+          .from('subscription_um_chamado')
+          .update({
+            status_subscription: 'is_subscription_um_chamado'
+          })
+          .eq('email_subscription', email)
+          .select()
+          .single();
+        
+        updatedSubscription = updateResult.data;
+        updateError = updateResult.error;
+      } catch (err) {
+        console.error('Erro ao atualizar status da inscrição:', err);
+        updateError = err;
+      }
+      
+      if (updateError) {
+        console.error('Erro ao atualizar status da inscrição:', updateError);
+        return res.status(500).json({
+          success: false,
+          message: 'Erro ao atualizar sua inscrição',
+          details: updateError.message
+        });
+      }
+      
+      console.log(`Status da inscrição atualizado com sucesso para: ${email}`);
       return res.status(200).json({
         success: true,
-        message: 'Você já está inscrito para receber as cartas por email',
-        subscription: existingSubscription
+        message: 'Sua inscrição foi atualizada com sucesso!',
+        subscription: updatedSubscription
       });
     }
     

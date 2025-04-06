@@ -44,28 +44,103 @@ const HomePage = () => {
     fetchCartas();
   }, []);
   
-  // Efeito para verificar se o usuário já está inscrito
+  // Efeito para verificar se o usuário já está inscrito com cache local
   useEffect(() => {
+    const LOCAL_STORAGE_KEY = 'subscription_status';
+    
     const checkSubscriptionStatus = async () => {
       if (!user || !user.email) return;
       
       try {
         setCheckingSubscription(true);
         
-        // Verificar se estamos em ambiente de produção (Vercel)
+        // Verificar se temos cache local
+        const cachedStatus = localStorage.getItem(`${LOCAL_STORAGE_KEY}_${user.email}`);
+        
+        // Se temos um cache local indicando que o usuário já está inscrito,
+        // não precisamos fazer a requisição
+        if (cachedStatus === 'confirmed') {
+          console.log('Usando cache local: usuário já está inscrito');
+          setIsSubscribed(true);
+          setCheckingSubscription(false);
+          return;
+        }
+        
+        console.log('Cache local não encontrado ou inválido, verificando com o servidor');
+        
+        // Verificar se estamos em ambiente de produção (Vercel) ou desenvolvimento
         const isProduction = window.location.hostname.includes('.vercel.app') || 
                            window.location.hostname.includes('.replit.app');
         
-        // Verificamos a subscrição usando a API apropriada para o ambiente
-        const apiUrl = `/api/check-subscription?email=${encodeURIComponent(user.email)}`;
-        console.log(`Verificando subscrição via: ${apiUrl}`);
+        // Preparando a requisição para o endpoint de verificação de status
+        let response: Response | undefined;
+        let retry = false;
+        let attempts = 0;
         
-        const response = await fetch(apiUrl);
+        // Função para tentar fazer a requisição
+        const attemptRequest = async (endpoint: string) => {
+          console.log(`Tentativa ${attempts + 1} usando endpoint: ${endpoint}`);
+          return fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email: user.email }),
+          });
+        };
         
+        // Tenta diferentes endpoints e estratégias
+        do {
+          retry = false;
+          attempts++;
+          
+          try {
+            if (isProduction) {
+              // Em produção tentamos primeiro com o endpoint específico
+              if (attempts === 1) {
+                console.log('Usando endpoint específico check-subscription-status');
+                response = await attemptRequest('/api/check-subscription-status');
+              } else {
+                // Na segunda tentativa, usamos um endpoint alternativo
+                console.log('Tentando endpoint alternativo');
+                response = await attemptRequest('/api/dashboard-subscribe');
+              }
+            } else {
+              // Em desenvolvimento
+              console.log('Ambiente de desenvolvimento: usando endpoint de verificação de status');
+              response = await attemptRequest('/api/check-subscription-status');
+            }
+            
+            // Se a resposta for 405 (Method Not Allowed) e estamos em produção
+            // tentamos com outro endpoint
+            if (response && response.status === 405 && isProduction && attempts === 1) {
+              console.warn('Erro 405 detectado, tentando endpoint alternativo...');
+              retry = true;
+              continue;
+            }
+          } catch (networkError) {
+            console.error('Erro de rede ao verificar status:', networkError);
+            
+            // Se houver erro de rede e estamos em produção, tentamos outro endpoint
+            if (isProduction && attempts === 1) {
+              console.warn('Erro de rede detectado, tentando endpoint alternativo...');
+              retry = true;
+              continue;
+            }
+            throw networkError;
+          }
+        } while (retry && attempts < 2);
+        
+        // Se não temos resposta, algo deu muito errado
+        if (!response) {
+          throw new Error('Não foi possível conectar ao servidor. Tente novamente mais tarde.');
+        }
+        
+        // Verificar se a resposta é válida antes de tentar parsear o JSON
         if (!response.ok) {
           const errorText = await response.text();
-          console.error(`Erro na resposta de verificação (${response.status}):`, errorText);
-          throw new Error(`Erro ao verificar subscrição (${response.status}): ${errorText || 'Sem detalhes'}`);
+          console.error(`Erro na resposta (${response.status}):`, errorText);
+          throw new Error(`Erro ao verificar status (${response.status}): ${errorText || 'Sem detalhes'}`);
         }
         
         // Tratativa para resposta vazia
@@ -77,20 +152,33 @@ const HomePage = () => {
           return;
         }
         
-        // Tenta parsear o JSON da resposta com tratativa de erro
+        // Tenta parsear o JSON da resposta
         let data;
         try {
           data = JSON.parse(responseText);
+          console.log('Resposta do servidor:', data);
         } catch (error) {
-          console.error('Erro ao parsear resposta JSON de verificação:', error, 'Texto recebido:', responseText);
-          throw new Error(`Erro ao processar dados da verificação: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+          console.error('Erro ao parsear resposta JSON:', error, 'Texto recebido:', responseText);
+          throw new Error(`Erro ao processar dados: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
         }
         
-        // Se a API retornar isSubscribed como true, o usuário já está inscrito
-        setIsSubscribed(data.isSubscribed);
-        console.log("Status de subscrição:", data.isSubscribed ? "Inscrito" : "Não inscrito");
+        // Se a resposta indica que o usuário tem o status de inscrição confirmado
+        if (data.hasSubscriptionStatus) {
+          // Armazenamos no cache local para evitar futuras requisições
+          localStorage.setItem(`${LOCAL_STORAGE_KEY}_${user.email}`, 'confirmed');
+          console.log('Status confirmado armazenado no cache local');
+          setIsSubscribed(true);
+        } else if (data.isSubscribed) {
+          // Usuário está inscrito mas não tem o status confirmado
+          console.log('Usuário inscrito, mas sem status confirmado');
+          setIsSubscribed(false);
+        } else {
+          // Usuário não está inscrito
+          console.log('Usuário não inscrito');
+          setIsSubscribed(false);
+        }
       } catch (error) {
-        console.error("Erro ao verificar status de subscrição:", error);
+        console.error("Erro ao verificar status de inscrição:", error);
         // Em caso de erro, assumimos que não está inscrito para mostrar o banner
         setIsSubscribed(false);
       } finally {

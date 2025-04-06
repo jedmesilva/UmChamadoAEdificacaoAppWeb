@@ -111,6 +111,11 @@ const SubscriptionBanner = ({ email, onSubscriptionComplete }: SubscriptionBanne
         // Marca como bem-sucedido
         setIsSuccess(true);
         
+        // Salva no cache local para evitar futuras requisições
+        const LOCAL_STORAGE_KEY = 'subscription_status';
+        localStorage.setItem(`${LOCAL_STORAGE_KEY}_${email}`, 'confirmed');
+        console.log('Status confirmado armazenado no cache local (resposta vazia)');
+        
         // Notifica o componente pai que a subscrição foi concluída
         onSubscriptionComplete();
         return;
@@ -135,6 +140,11 @@ const SubscriptionBanner = ({ email, onSubscriptionComplete }: SubscriptionBanne
       
       // Marca como bem-sucedido
       setIsSuccess(true);
+      
+      // Salva no cache local para evitar futuras requisições
+      const LOCAL_STORAGE_KEY = 'subscription_status';
+      localStorage.setItem(`${LOCAL_STORAGE_KEY}_${email}`, 'confirmed');
+      console.log('Status confirmado armazenado no cache local');
       
       // Notifica o componente pai que a subscrição foi concluída
       onSubscriptionComplete();
