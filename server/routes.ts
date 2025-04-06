@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { setupAuth } from "./auth";
 import { authService, subscriptionService, cartasService } from "../lib/supabase-service";
 import { createClient } from "@supabase/supabase-js";
+import crypto from 'crypto';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication routes
@@ -202,34 +203,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`Criando nova subscrição para ${email}...`);
           
           try {
-            const supabaseUrl = process.env.VITE_SUPABASE_URL;
-            const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
-            
-            if (!supabaseUrl || !supabaseKey) {
-              throw new Error("Credenciais do Supabase não encontradas no ambiente");
-            }
-            
-            // Cria um ID único para a subscrição
-            const subscriptionId = require('uuid').v4();
-            const now = new Date().toISOString();
-            
-            // Usar o cliente normal do supabaseClient para inserir
-            const { error } = await require('@supabase/supabase-js')
-              .createClient(supabaseUrl, supabaseKey)
-              .from('subscription_um_chamado')
-              .insert({
-                id: subscriptionId,
-                email_subscription: email,
-                created_at: now,
-                status_subscription: 'is_subscription_um_chamado'
-              });
-            
-            if (error) {
-              console.error("Erro ao inserir subscrição:", error);
-              throw error;
-            }
-            
-            console.log(`Subscrição criada com ID ${subscriptionId} para ${email}`);
+            // Vamos direto pelo serviço de subscrição que já está funcionando em outros lugares
+            const subscription = await subscriptionService.createSubscription(email);
+            console.log(`Subscrição criada com sucesso via serviço:`, subscription);
           } catch (subscriptionError: any) {
             console.error(`Erro ao criar subscrição:`, subscriptionError);
             // Não interrompe o fluxo
