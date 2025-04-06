@@ -25,6 +25,15 @@ export const authService = {
 
       // 2. Cria o registro na tabela account_user usando o mesmo ID do auth.users
       // para garantir que a chave estrangeira funcione corretamente
+      // Adicionando log para debug
+      console.log(`Tentando inserir na tabela account_user:`, {
+        id: authUser.user.id,
+        user_id: authUser.user.id,
+        name,
+        email
+      });
+      
+      // Usando o admin cliente com mais privilégios
       const { data: accountUser, error: accountError } = await supabaseAdmin
         .from('account_user')
         .insert({
@@ -33,6 +42,7 @@ export const authService = {
           name,
           email,
           status: 'active',
+          created_at: new Date().toISOString() // Adicionando explicitamente created_at
         })
         .select()
         .single();
@@ -93,6 +103,7 @@ export const authService = {
       // Geramos um ID único para este usuário, mas quando ele completar o registro
       // e criar uma conta de autenticação, este ID será atualizado para o ID da conta de auth
       const tempUserId = uuidv4();
+      console.log(`Criando account_user temporário para ${email} com ID ${tempUserId}`);
       const { data: newUser, error: insertError } = await supabaseAdmin
         .from('account_user')
         .insert({
@@ -100,6 +111,7 @@ export const authService = {
           email,
           name: '', // Nome será preenchido depois no cadastro completo
           status: 'subscribed', // Status inicial
+          created_at: new Date().toISOString() // Adicionando explicitamente created_at
         })
         .select()
         .single();
@@ -144,6 +156,7 @@ export const authService = {
       // 3. Atualiza ou cria o account_user
       if (existingUser) {
         // Atualiza o usuário existente
+        console.log(`Atualizando account_user existente para ${email} com ID ${authUser.user.id}`);
         const { data: updatedUser, error: updateError } = await supabaseAdmin
           .from('account_user')
           .update({
@@ -151,6 +164,7 @@ export const authService = {
             user_id: authUser.user.id,
             name,
             status: 'active',
+            // Não incluímos created_at aqui pois é uma atualização
           })
           .eq('email', email)
           .select()
@@ -160,6 +174,7 @@ export const authService = {
         return { authUser: authUser.user, accountUser: updatedUser };
       } else {
         // Cria um novo account_user
+        console.log(`Criando novo account_user para ${email} com ID ${authUser.user.id}`);
         const { data: newUser, error: insertError } = await supabaseAdmin
           .from('account_user')
           .insert({
@@ -168,6 +183,7 @@ export const authService = {
             name,
             email,
             status: 'active',
+            created_at: new Date().toISOString() // Adicionando explicitamente created_at
           })
           .select()
           .single();
@@ -431,7 +447,8 @@ export const cartasService = {
               user_id: userId,
               email: authUser.user.email || 'sem-email@exemplo.com',
               name: authUser.user.user_metadata?.name || 'Usuário',
-              status: 'active'
+              status: 'active',
+              created_at: new Date().toISOString() // Adicionando created_at explicitamente
             });
             
           if (insertAccountError) {
