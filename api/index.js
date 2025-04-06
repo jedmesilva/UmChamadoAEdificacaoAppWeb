@@ -9,7 +9,7 @@ import { createClient } from '@supabase/supabase-js';
  * @param {Object} res - Objeto de resposta
  */
 export default async function handler(req, res) {
-  // Configuração CORS (simplificada e otimizada)
+  // Configuração CORS (ajustada para autenticação)
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
@@ -19,7 +19,9 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') {
     console.log('Respondendo a preflight request com 200 OK');
     // Métodos permitidos explicitamente para cada endpoint
-    if (req.url.includes('/cartas/registrar-leitura')) {
+    if (req.url.includes('/auth/register')) {
+      res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    } else if (req.url.includes('/cartas/registrar-leitura')) {
       res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     } else if (req.url.includes('/subscribe') || req.url.includes('/dashboard-subscribe')) {
       res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
