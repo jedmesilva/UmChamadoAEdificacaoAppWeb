@@ -2,9 +2,9 @@
 // Ele garante que a aplicação seja construída como um frontend React com Vite
 // em vez de uma aplicação Node.js
 
-import { execSync } from 'child_process';
-import fs from 'fs';
-import path from 'path';
+const { execSync } = require('child_process');
+const fs = require('fs');
+const path = require('path');
 
 console.log('🚀 Iniciando o build especializado para a Vercel');
 
