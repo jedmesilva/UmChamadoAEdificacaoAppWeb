@@ -10,11 +10,11 @@ console.log("Ambiente de execução:", isProduction ? "produção" : "desenvolvi
 
 // Helper para normalizar URLs da API com base no ambiente
 export function normalizeApiUrl(url: string): string {
-  // Para URLs que começam com /api/auth/ em produção, precisamos
-  // remover o prefixo /api para mapear corretamente para as funções serverless do Vercel
-  if (isProduction && url.startsWith('/api/auth/')) {
-    console.log(`Normalizando URL da API para produção: ${url} -> ${url.replace('/api/', '/')}`);
-    return url.replace('/api/', '/');
+  if (isProduction) {
+    // Em produção, não precisamos modificar as URLs
+    // Elas já devem estar mapeadas corretamente via vercel.json
+    console.log(`Ambiente de produção: mantendo URL original: ${url}`);
+    return url;
   }
   return url;
 }

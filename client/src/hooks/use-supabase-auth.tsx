@@ -44,22 +44,38 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   const signIn = async (email: string, password: string) => {
     try {
       setIsLoading(true);
+      console.log(`Iniciando login para ${email}`);
       
       try {
-        // Tentar usar a API personalizada primeiro (para Vercel)
-        const response = await apiRequest("POST", "/api/auth/login", {
-          email,
-          password,
+        // Primeira tentativa: usar a API personalizada
+        console.log("Tentando login via API em: /api/auth/login");
+        const response = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            email,
+            password,
+          }),
+          credentials: "include"
         });
         
-        console.log("Login via API foi bem-sucedido:", response);
+        if (!response.ok) {
+          const errorData = await response.text();
+          console.error(`Erro na API de login: ${response.status} - ${errorData}`);
+          throw new Error(`Erro no login: ${response.status} - ${errorData || response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log("Login via API foi bem-sucedido:", data);
         
         // Verificar se o login foi bem-sucedido
-        if (response && response.user) {
+        if (data && data.user) {
           // Atualizar o estado de autenticação localmente
           await supabaseClient.auth.setSession({
-            access_token: response.session.access_token,
-            refresh_token: response.session.refresh_token,
+            access_token: data.session.access_token,
+            refresh_token: data.session.refresh_token,
           });
         }
         
@@ -70,26 +86,42 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
         
         return;
       } catch (apiError) {
-        console.log("Erro na API de login, tentando diretamente com Supabase:", apiError);
+        console.error("Erro na API de login, tentando diretamente com Supabase:", apiError);
         // Se falhar, cai no fallback direto com o Supabase
       }
       
-      // Fallback para o método direto do Supabase
-      const { error } = await supabaseClient.auth.signInWithPassword({
+      // Fallback: login direto via Supabase client
+      console.log("Tentando login direto via Supabase client");
+      const { data, error } = await supabaseClient.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) throw error;
       
-      toast({
-        title: "Login realizado com sucesso",
-        description: "Bem-vindo de volta!",
-      });
+      if (data?.user) {
+        console.log("Login direto via Supabase bem-sucedido", data.user);
+        toast({
+          title: "Login realizado com sucesso",
+          description: "Bem-vindo de volta!",
+        });
+      } else {
+        throw new Error("Login falhou - resposta inesperada");
+      }
     } catch (error: any) {
+      let errorMessage = "Tente novamente mais tarde";
+      
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (error && typeof error === 'object' && 'message' in error) {
+        errorMessage = String(error.message);
+      }
+      
+      console.error("Erro no login:", errorMessage);
+      
       toast({
         title: "Erro ao fazer login",
-        description: error.message || "Tente novamente mais tarde",
+        description: errorMessage,
         variant: "destructive",
       });
       throw error;
@@ -101,21 +133,73 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   const signUp = async (email: string, password: string, name: string) => {
     try {
       setIsLoading(true);
+      console.log(`Iniciando registro para ${email} com nome ${name}`);
       
-      // Usar apiRequest para fazer o cadastro completo, criando usuário no Auth e perfil no account_user
-      await apiRequest("POST", "/api/auth/register", {
+      try {
+        // Primeira tentativa: usar a API personalizada
+        console.log("Tentando registro via API em: /api/auth/register");
+        const response = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            email,
+            password,
+            name,
+          }),
+          credentials: "include"
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.text();
+          console.error(`Erro na API de registro: ${response.status} - ${errorData}`);
+          throw new Error(`Erro no registro: ${response.status} - ${errorData || response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log("Resposta do servidor:", data);
+        
+        toast({
+          title: "Cadastro realizado com sucesso",
+          description: "Fazendo login automaticamente...",
+        });
+        
+        // Faz login automaticamente após o cadastro
+        await signIn(email, password);
+        return;
+      } catch (apiError) {
+        console.error("Erro na API de registro, tentando diretamente com Supabase:", apiError);
+        // Se falhar, cai no fallback direto com o Supabase
+      }
+      
+      // Fallback: registro direto via Supabase client
+      console.log("Tentando registro direto via Supabase client");
+      const { data, error } = await supabaseClient.auth.signUp({
         email,
         password,
-        name,
+        options: {
+          data: {
+            name,
+          },
+        },
       });
       
-      toast({
-        title: "Cadastro realizado com sucesso",
-        description: "Fazendo login automaticamente...",
-      });
+      if (error) throw error;
       
-      // Faz login automaticamente após o cadastro
-      await signIn(email, password);
+      // Verificamos se o usuário foi criado com sucesso
+      if (data?.user) {
+        console.log("Registro direto via Supabase bem-sucedido", data.user);
+        toast({
+          title: "Cadastro realizado com sucesso",
+          description: "Fazendo login automaticamente...",
+        });
+        
+        // Faz login automaticamente após o cadastro
+        await signIn(email, password);
+      } else {
+        throw new Error("Não foi possível criar o usuário");
+      }
       
     } catch (error: any) {
       let errorMessage = "Tente novamente mais tarde";
@@ -125,6 +209,8 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       } else if (error && typeof error === 'object' && 'message' in error) {
         errorMessage = String(error.message);
       }
+      
+      console.error("Erro no cadastro:", errorMessage);
       
       toast({
         title: "Erro ao criar conta",
