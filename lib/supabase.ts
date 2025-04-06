@@ -16,8 +16,15 @@ export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
   }
 });
 
-// Configuração especial para contornar o RLS (Row Level Security)
+// Função para obter um cliente que bypass as políticas de RLS quando necessário para operações admin
 export const getRLSBypassClient = (): SupabaseClient => {
+  // verifica se a chave service role está disponível
+  if (!supabaseServiceRoleKey) {
+    console.warn('Service role key não disponível, usando cliente anônimo');
+    return supabaseClient;
+  }
+  
+  // Retorna o cliente admin com headers especiais para garantir o bypass do RLS
   return createClient(supabaseUrl, supabaseServiceRoleKey, {
     auth: {
       autoRefreshToken: false,

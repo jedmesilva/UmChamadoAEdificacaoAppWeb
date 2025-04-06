@@ -37,9 +37,16 @@ export default async function handler(req, res) {
 
   // Configurar cliente Supabase (com validação aprimorada)
   const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+  // Usar a chave de serviço em vez da chave anônima para operações de API backend
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+  
+  // Escolha a chave apropriada (preferencialmente a chave de serviço)
+  const supabaseKey = supabaseServiceKey || supabaseAnonKey;
 
-  console.log(`Configurando Supabase com URL: ${supabaseUrl ? 'disponível' : 'não disponível'}, KEY: ${supabaseKey ? 'disponível' : 'não disponível'}`);
+  console.log(`Configurando Supabase com URL: ${supabaseUrl ? 'disponível' : 'não disponível'}, 
+              ROLE KEY: ${supabaseServiceKey ? 'disponível' : 'não disponível'},
+              ANON KEY: ${supabaseAnonKey ? 'disponível' : 'não disponível'}`);
   
   if (!supabaseUrl || !supabaseKey) {
     console.error('Configuração do Supabase não encontrada no ambiente');
@@ -49,7 +56,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Inicializar cliente Supabase
+    // Inicializar cliente Supabase com SERVICE ROLE (bypass RLS)
     const supabase = createClient(supabaseUrl, supabaseKey);
     
     // Rota para status da API

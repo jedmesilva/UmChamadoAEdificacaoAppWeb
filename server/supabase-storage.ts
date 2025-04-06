@@ -3,6 +3,7 @@ import session from "express-session";
 import { authService, cartasService } from "../lib/supabase-service";
 import { AccountUser, Carta } from "../lib/supabase-types";
 import createMemoryStore from "memorystore";
+import { getRLSBypassClient } from "../lib/supabase";
 
 // Importando a interface que precisamos
 import { IStorage } from "./storage";
