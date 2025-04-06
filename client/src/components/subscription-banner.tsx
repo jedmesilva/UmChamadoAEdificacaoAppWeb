@@ -21,7 +21,16 @@ const SubscriptionBanner = ({ email, onSubscriptionComplete }: SubscriptionBanne
     setError(null);
     
     try {
-      const response = await fetch('/api/dashboard-subscribe', {
+      // Verificar se estamos em ambiente de produção (Vercel)
+      const isProduction = window.location.hostname.includes('.vercel.app') || 
+                         window.location.hostname.includes('.replit.app');
+      
+      // Usar a rota correta com base no ambiente
+      const apiUrl = isProduction ? '/api/subscribe' : '/api/dashboard-subscribe';
+      
+      console.log(`Usando API URL: ${apiUrl} para ambiente: ${isProduction ? 'produção' : 'desenvolvimento'}`);
+      
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -29,10 +38,40 @@ const SubscriptionBanner = ({ email, onSubscriptionComplete }: SubscriptionBanne
         body: JSON.stringify({ email }),
       });
       
-      const data = await response.json();
-      
+      // Verificar se a resposta é válida antes de tentar parsear o JSON
       if (!response.ok) {
-        throw new Error(data.message || 'Erro ao processar inscrição');
+        const errorText = await response.text();
+        console.error(`Erro na resposta (${response.status}):`, errorText);
+        throw new Error(`Erro ao processar inscrição (${response.status}): ${errorText || 'Sem detalhes'}`);
+      }
+      
+      // Tratativa para resposta vazia
+      const responseText = await response.text();
+      
+      if (!responseText || responseText.trim() === '') {
+        console.log('Resposta vazia, mas status OK. Considerando sucesso.');
+        // Mostra toast de sucesso mesmo sem resposta JSON
+        toast({
+          title: "Sucesso!",
+          description: "Você agora receberá as cartas por email.",
+          variant: "default",
+        });
+        
+        // Marca como bem-sucedido
+        setIsSuccess(true);
+        
+        // Notifica o componente pai que a subscrição foi concluída
+        onSubscriptionComplete();
+        return;
+      }
+      
+      // Tenta parsear o JSON da resposta
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (error) {
+        console.error('Erro ao parsear resposta JSON:', error, 'Texto recebido:', responseText);
+        throw new Error(`Erro ao processar dados da inscrição: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
       }
       
       // Mostra toast de sucesso
