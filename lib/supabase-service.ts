@@ -257,7 +257,8 @@ export const subscriptionService = {
         .insert({
           id: uuidv4(),
           email_subscription: email,
-          created_at: now
+          created_at: now,
+          status_subscription: 'is_subscription_um_chamado' // Adicionando o status conforme solicitado
         })
         .select()
         .single();

@@ -16,7 +16,7 @@ export interface Subscription {
   id: string;
   email_subscription: string;
   created_at: string;
-  status?: string; // Tornado opcional para compatibilidade
+  status_subscription?: string; // Campo para armazenar o status da subscrição
 }
 
 export interface Carta {
