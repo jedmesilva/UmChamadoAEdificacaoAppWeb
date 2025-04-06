@@ -81,11 +81,17 @@ export default async function handler(req, res) {
     const supabase = createClient(supabaseUrl, supabaseKey);
     console.log(`Cliente Supabase inicializado para verificação de status`);
     
-    // Busca a inscrição do usuário
+    // Busca a inscrição do usuário usando diferentes abordagens
     let subscription = null;
     let queryError = null;
+    let attempts = 0;
+    const maxAttempts = 3;
     
+    // Primeira tentativa - busca normal
     try {
+      attempts++;
+      console.log(`Tentativa ${attempts} de buscar inscrição para ${email}`);
+      
       const result = await supabase
         .from('subscription_um_chamado')
         .select('*')
@@ -94,34 +100,89 @@ export default async function handler(req, res) {
       
       subscription = result.data;
       queryError = result.error;
+      
+      if (subscription) {
+        console.log(`Inscrição encontrada na tentativa ${attempts}`);
+      } else if (queryError && queryError.code !== 'PGRST116') {
+        console.error(`Erro na tentativa ${attempts}:`, queryError);
+      }
     } catch (err) {
-      console.error('Erro ao consultar inscrição para verificação de status:', err);
+      console.error(`Exceção na tentativa ${attempts}:`, err);
       queryError = err;
     }
     
+    // Segunda tentativa - busca sem single()
+    if (!subscription && attempts < maxAttempts) {
+      attempts++;
+      console.log(`Tentativa ${attempts} de buscar inscrição para ${email} (sem single)`);
+      
+      try {
+        const result = await supabase
+          .from('subscription_um_chamado')
+          .select('*')
+          .eq('email_subscription', email);
+        
+        if (result.data && result.data.length > 0) {
+          subscription = result.data[0];
+          queryError = null;
+          console.log(`Inscrição encontrada na tentativa ${attempts} (array)`);
+        } else {
+          queryError = result.error || { message: 'Nenhum resultado encontrado' };
+        }
+      } catch (err) {
+        console.error(`Exceção na tentativa ${attempts}:`, err);
+        queryError = err;
+      }
+    }
+    
+    // Terceira tentativa - usar rpc se disponível
+    if (!subscription && attempts < maxAttempts) {
+      attempts++;
+      console.log(`Tentativa ${attempts} de buscar inscrição para ${email} (via RPC)`);
+      
+      try {
+        const result = await supabase.rpc('get_subscription_by_email', { 
+          email_param: email 
+        });
+        
+        if (result.data) {
+          subscription = result.data;
+          queryError = null;
+          console.log(`Inscrição encontrada na tentativa ${attempts} (RPC)`);
+        } else {
+          queryError = result.error || { message: 'RPC não disponível ou sem resultados' };
+        }
+      } catch (err) {
+        console.error(`Exceção na tentativa ${attempts}:`, err);
+        queryError = err;
+      }
+    }
+    
     // Se houver erro na consulta
-    if (queryError && queryError.code !== 'PGRST116') {
-      console.error('Erro ao verificar status de inscrição:', queryError);
+    if (queryError && queryError.code !== 'PGRST116' && !subscription) {
+      console.error('Erro ao verificar status de inscrição após múltiplas tentativas:', queryError);
       return res.status(500).json({
         success: false,
         message: 'Erro ao verificar status de inscrição',
-        details: queryError.message
+        details: queryError.message,
+        attempts: attempts
       });
     }
     
     // Se não encontrou inscrição
     if (!subscription) {
-      console.log(`Inscrição não encontrada para: ${email}`);
+      console.log(`Inscrição não encontrada para ${email} após ${attempts} tentativas`);
       return res.status(200).json({
         success: true,
         isSubscribed: false,
         hasSubscriptionStatus: false,
-        message: 'Usuário não inscrito'
+        message: 'Usuário não inscrito',
+        attempts: attempts
       });
     }
     
     // Inscrição encontrada - Log detalhado dos dados
-    console.log('Dados da inscrição encontrada:', JSON.stringify(subscription, null, 2));
+    console.log(`Dados da inscrição encontrada após ${attempts} tentativas:`, JSON.stringify(subscription, null, 2));
     
     // Verificação rigorosa da presença do campo status_subscription
     const hasStatusField = typeof subscription.status_subscription !== 'undefined' && 

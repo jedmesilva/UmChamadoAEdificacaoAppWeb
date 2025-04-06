@@ -58,7 +58,7 @@ export default async function handler(req, res) {
     
     // Testar a conexão com uma consulta simples
     const start = Date.now();
-    const { data, error } = await supabase
+    const { data: subscriptionData, error: subscriptionError } = await supabase
       .from('subscription_um_chamado')
       .select('count', { count: 'exact' })
       .limit(1);
@@ -66,18 +66,85 @@ export default async function handler(req, res) {
     const end = Date.now();
     const responseTime = end - start;
     
-    if (error) {
-      throw error;
+    if (subscriptionError) {
+      console.error('Erro ao verificar subscription_um_chamado:', subscriptionError);
+    }
+    
+    // Testes adicionais para outras tabelas
+    const { data: usersData, error: usersError } = await supabase
+      .from('account_user')
+      .select('count', { count: 'exact' })
+      .limit(1);
+      
+    if (usersError) {
+      console.error('Erro ao verificar account_user:', usersError);
+    }
+    
+    // Verificar tabelas e permissões
+    const tables = ['subscription_um_chamado', 'account_user', 'cartas_um_chamado_a_edificacao', 'status_carta'];
+    const tableStatus = {};
+    
+    for (const table of tables) {
+      try {
+        const { data, error } = await supabase
+          .from(table)
+          .select('count', { count: 'exact' })
+          .limit(1);
+          
+        tableStatus[table] = {
+          accessible: !error,
+          count: data?.count || 0,
+          error: error ? error.message : null
+        };
+      } catch (err) {
+        tableStatus[table] = {
+          accessible: false,
+          count: 0,
+          error: err.message || String(err)
+        };
+      }
+    }
+    
+    // Verificar as permissões RLS
+    let rlsBypass = true;
+    try {
+      // Tentativa de fazer uma operação que exigiria SERVICE ROLE
+      const { error: adminError } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1 });
+      if (adminError) {
+        rlsBypass = false;
+        console.warn('Serviço não tem permissões de RLS bypass:', adminError);
+      }
+    } catch (rlsError) {
+      rlsBypass = false;
+      console.warn('Erro ao verificar permissões de administrador:', rlsError);
+    }
+    
+    // Se houver algum erro crítico, lançar exceção
+    if (subscriptionError && usersError) {
+      throw new Error(`Múltiplos erros de conexão: ${subscriptionError.message}, ${usersError.message}`);
     }
     
     // Responder com informações de status
     return res.status(200).json({
       status: 'online',
-      message: 'Conexão com Supabase estabelecida com sucesso',
+      message: 'Verificação de Supabase concluída',
       timestamp: new Date().toISOString(),
       responseTime: `${responseTime}ms`,
+      environment: {
+        NODE_ENV: process.env.NODE_ENV || 'não definido',
+        runtime: typeof window === 'undefined' ? 'node' : 'browser',
+        vercel: !!process.env.VERCEL || false
+      },
+      connection: {
+        url: supabaseUrl ? 'configurado' : 'não configurado',
+        anon_key: supabaseAnonKey ? 'configurado' : 'não configurado',
+        service_key: supabaseServiceKey ? 'configurado' : 'não configurado',
+        rls_bypass: rlsBypass
+      },
+      tables: tableStatus,
       counts: {
-        subscriptions: data?.count || 0
+        subscriptions: subscriptionData?.count || 0,
+        users: usersData?.count || 0
       }
     });
     

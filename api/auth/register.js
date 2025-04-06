@@ -230,11 +230,56 @@ export default async function handler(req, res) {
             
           if (upsertError) {
             console.error('Erro na segunda tentativa (upsert):', JSON.stringify(upsertError));
-            throw new Error(`Múltiplas falhas ao criar account_user: ${upsertError.message}`);
+            
+            // Terceira tentativa - usando RPC (se existir)
+            try {
+              console.log('Tentando terceira abordagem com RPC');
+              const { data: rpcResult, error: rpcError } = await supabase.rpc('create_account_user', {
+                p_id: authUser.id,
+                p_user_id: authUser.id,
+                p_name: name,
+                p_email: email,
+                p_status: 'active',
+                p_created_at: new Date().toISOString()
+              });
+              
+              if (rpcError) {
+                console.error('Erro na terceira tentativa (RPC):', JSON.stringify(rpcError));
+                
+                // Quarta tentativa - Query SQL nativa pelo driver
+                console.log('Tentando quarta abordagem com SQL nativo');
+                const { data: sqlResult, error: sqlError } = await supabase.from('account_user')
+                  .insert([
+                    {
+                      id: authUser.id,
+                      user_id: authUser.id,
+                      name: name,
+                      email: email,
+                      status: 'active',
+                      created_at: new Date().toISOString()
+                    }
+                  ])
+                  .select();
+                
+                if (sqlError) {
+                  console.error('Todas as abordagens falharam:', sqlError);
+                  throw new Error(`Múltiplas falhas ao criar account_user: ${sqlError.message}`);
+                }
+                
+                accountUser = sqlResult[0];
+                console.log(`account_user criado com sucesso via SQL nativo: ${JSON.stringify(accountUser)}`);
+              } else {
+                accountUser = rpcResult;
+                console.log(`account_user criado com sucesso via RPC: ${JSON.stringify(accountUser)}`);
+              }
+            } catch (fallbackError) {
+              console.error('Erro nas tentativas alternativas:', fallbackError);
+              throw new Error(`Múltiplas falhas ao criar account_user: ${fallbackError.message}`);
+            }
+          } else {
+            accountUser = upsertUser;
+            console.log(`account_user criado com sucesso via upsert: ${JSON.stringify(accountUser)}`);
           }
-          
-          accountUser = upsertUser;
-          console.log(`account_user criado com sucesso via upsert: ${JSON.stringify(accountUser)}`);
         } else {
           accountUser = newUser;
           console.log(`account_user criado com sucesso: ${JSON.stringify(accountUser)}`);
