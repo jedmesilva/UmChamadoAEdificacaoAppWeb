@@ -3,9 +3,11 @@ import { useSupabaseAuth } from "@/hooks/use-supabase-auth";
 import Header from "@/components/layout/header";
 import Footer from "@/components/layout/footer";
 import LetterCard from "@/components/letters/letter-card";
+import SubscriptionBanner from "@/components/subscription-banner";
 import { Letter, SupabaseCarta } from "@shared/schema";
 import { Loader2 } from "lucide-react";
 import { cartaService } from "@/lib/carta-service";
+// import { subscriptionService } from "@/lib/supabase-service"; // Problemas de importação
 import { useEffect, useState } from "react";
 
 const HomePage = () => {
@@ -13,6 +15,8 @@ const HomePage = () => {
   const [cartasSupabase, setCartasSupabase] = useState<SupabaseCarta[]>([]);
   const [isCartasLoading, setIsCartasLoading] = useState(true);
   const [cartasError, setCartasError] = useState<Error | null>(null);
+  const [isSubscribed, setIsSubscribed] = useState<boolean | null>(null);
+  const [checkingSubscription, setCheckingSubscription] = useState(true);
   
   // Query para buscar cartas pela API REST (fallback)
   const { data: letters, isLoading: isLettersLoading, error: lettersError } = useQuery<Letter[]>({
@@ -39,6 +43,34 @@ const HomePage = () => {
 
     fetchCartas();
   }, []);
+  
+  // Efeito para verificar se o usuário já está inscrito
+  useEffect(() => {
+    const checkSubscriptionStatus = async () => {
+      if (!user || !user.email) return;
+      
+      try {
+        setCheckingSubscription(true);
+        // Verificamos a subscrição usando a API
+        const response = await fetch(`/api/check-subscription?email=${encodeURIComponent(user.email)}`);
+        const data = await response.json();
+        
+        // Se a API retornar isSubscribed como true, o usuário já está inscrito
+        setIsSubscribed(data.isSubscribed);
+        console.log("Status de subscrição:", data.isSubscribed ? "Inscrito" : "Não inscrito");
+      } catch (error) {
+        console.error("Erro ao verificar status de subscrição:", error);
+        // Em caso de erro, assumimos que não está inscrito para mostrar o banner
+        setIsSubscribed(false);
+      } finally {
+        setCheckingSubscription(false);
+      }
+    };
+    
+    if (user) {
+      checkSubscriptionStatus();
+    }
+  }, [user]);
 
   // Determina o estado de carregamento geral
   const isLoading = isCartasLoading || isLettersLoading;
@@ -89,6 +121,14 @@ const HomePage = () => {
           </h1>
           <p className="text-gray-600">Aqui você encontra todas as cartas do Chamado à Edificação.</p>
         </div>
+        
+        {/* Banner de inscrição - exibe apenas se o usuário não está inscrito e não está carregando */}
+        {!checkingSubscription && isSubscribed === false && user?.email && (
+          <SubscriptionBanner 
+            email={user.email} 
+            onSubscriptionComplete={() => setIsSubscribed(true)} 
+          />
+        )}
         
         {isLoading ? (
           <div className="flex justify-center items-center py-12">

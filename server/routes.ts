@@ -147,6 +147,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
       next(error);
     }
   });
+  
+  // Rota para verificar se o usuário está inscrito
+  app.get("/api/check-subscription", async (req, res, next) => {
+    try {
+      const { email } = req.query;
+      
+      if (!email || typeof email !== 'string') {
+        return res.status(400).json({ 
+          message: "Email é obrigatório",
+          isSubscribed: false 
+        });
+      }
+      
+      try {
+        // Verificar se o usuário já está inscrito
+        const subscription = await subscriptionService.checkSubscription(email);
+        
+        return res.status(200).json({
+          isSubscribed: !!subscription,
+          subscription: subscription || null
+        });
+      } catch (error: any) {
+        console.error("Erro ao verificar subscrição:", error);
+        return res.status(200).json({ 
+          isSubscribed: false,
+          error: error.message 
+        });
+      }
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  // Rota para registrar subscrição diretamente do dashboard
+  app.post("/api/dashboard-subscribe", async (req, res, next) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ message: "Email é obrigatório" });
+      }
+      
+      try {
+        // Verificar se o usuário já está inscrito
+        const existingSubscription = await subscriptionService.checkSubscription(email);
+        
+        if (existingSubscription) {
+          // Se já estiver inscrito, retorna sucesso
+          return res.status(200).json({
+            success: true,
+            message: "Usuário já está inscrito",
+            subscription: existingSubscription
+          });
+        }
+        
+        // Cria uma nova inscrição
+        const subscription = await subscriptionService.createSubscription(email);
+        
+        return res.status(201).json({
+          success: true,
+          message: "Inscrição realizada com sucesso",
+          subscription
+        });
+      } catch (error: any) {
+        console.error("Erro ao processar inscrição do dashboard:", error);
+        return res.status(500).json({
+          success: false,
+          message: "Erro ao processar inscrição",
+          details: error.message
+        });
+      }
+    } catch (error) {
+      next(error);
+    }
+  });
 
   app.get("/api/letters/:id", async (req, res, next) => {
     try {
