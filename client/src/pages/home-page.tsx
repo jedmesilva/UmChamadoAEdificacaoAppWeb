@@ -51,9 +51,40 @@ const HomePage = () => {
       
       try {
         setCheckingSubscription(true);
-        // Verificamos a subscrição usando a API
-        const response = await fetch(`/api/check-subscription?email=${encodeURIComponent(user.email)}`);
-        const data = await response.json();
+        
+        // Verificar se estamos em ambiente de produção (Vercel)
+        const isProduction = window.location.hostname.includes('.vercel.app') || 
+                           window.location.hostname.includes('.replit.app');
+        
+        // Verificamos a subscrição usando a API apropriada para o ambiente
+        const apiUrl = `/api/check-subscription?email=${encodeURIComponent(user.email)}`;
+        console.log(`Verificando subscrição via: ${apiUrl}`);
+        
+        const response = await fetch(apiUrl);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`Erro na resposta de verificação (${response.status}):`, errorText);
+          throw new Error(`Erro ao verificar subscrição (${response.status}): ${errorText || 'Sem detalhes'}`);
+        }
+        
+        // Tratativa para resposta vazia
+        const responseText = await response.text();
+        
+        if (!responseText || responseText.trim() === '') {
+          console.log('Resposta de verificação vazia, assumindo não inscrito');
+          setIsSubscribed(false);
+          return;
+        }
+        
+        // Tenta parsear o JSON da resposta com tratativa de erro
+        let data;
+        try {
+          data = JSON.parse(responseText);
+        } catch (error) {
+          console.error('Erro ao parsear resposta JSON de verificação:', error, 'Texto recebido:', responseText);
+          throw new Error(`Erro ao processar dados da verificação: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+        }
         
         // Se a API retornar isSubscribed como true, o usuário já está inscrito
         setIsSubscribed(data.isSubscribed);

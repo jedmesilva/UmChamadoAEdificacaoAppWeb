@@ -31,32 +31,112 @@ const SubscriptionForm = () => {
   const onSubmit = async (data: SubscribeFormValues) => {
     setIsSubmitting(true);
     try {
-      // Registra o email no Supabase e verifica se já existe
-      const response = await apiRequest<{
-        message: string;
-        email: string;
-        redirect?: "login" | "register";
-      }>("POST", "/api/subscribe", data);
+      // Verificar se estamos em produção ou desenvolvimento
+      const isProduction = window.location.hostname.includes('.vercel.app') || 
+                         window.location.hostname.includes('.replit.app');
       
-      // Prepara o redirecionamento com base na resposta da API
-      if (response.redirect === "login") {
-        // Usuário já existe, redireciona para login
-        toast({
-          title: "Usuário já cadastrado!",
-          description: "Faça login para acessar as cartas.",
+      if (isProduction) {
+        // Para ambiente de produção, usamos fetch diretamente
+        console.log("Usando fetch direto para ambiente de produção");
+        
+        const response = await fetch('/api/subscribe', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
         });
         
-        // Redirect to login with email in query params
-        setLocation(`/auth?email=${encodeURIComponent(data.email)}&tab=login`);
+        // Verificar se a resposta é válida antes de tentar parsear o JSON
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`Erro na resposta (${response.status}):`, errorText);
+          throw new Error(`Erro ao processar inscrição (${response.status}): ${errorText || 'Sem detalhes'}`);
+        }
+        
+        // Tratativa para resposta vazia
+        const responseText = await response.text();
+        
+        if (!responseText || responseText.trim() === '') {
+          console.log('Resposta de subscrição vazia, redirecionando para registro');
+          // Mostrar toast padrão
+          toast({
+            title: "Inscrição recebida!",
+            description: "Agora complete seu cadastro para receber as cartas.",
+          });
+          
+          // Redirecionamos para o registro com o email nos parâmetros
+          setLocation(`/auth?email=${encodeURIComponent(data.email)}&tab=register`);
+          return;
+        }
+        
+        // Tenta parsear o JSON da resposta
+        let responseData;
+        try {
+          responseData = JSON.parse(responseText);
+        } catch (error) {
+          console.error('Erro ao parsear resposta JSON:', error, 'Texto recebido:', responseText);
+          // Mesmo com erro no parsing, redirecionamos para o registro
+          toast({
+            title: "Inscrição recebida!",
+            description: "Agora complete seu cadastro para receber as cartas.",
+          });
+          
+          setLocation(`/auth?email=${encodeURIComponent(data.email)}&tab=register`);
+          return;
+        }
+        
+        // Prepara o redirecionamento com base na resposta da API
+        if (responseData.redirect === "login") {
+          // Usuário já existe, redireciona para login
+          toast({
+            title: "Usuário já cadastrado!",
+            description: "Faça login para acessar as cartas.",
+          });
+          
+          // Redirect to login with email in query params
+          setLocation(`/auth?email=${encodeURIComponent(data.email)}&tab=login`);
+        } else {
+          // Novo usuário, redireciona para o registro
+          toast({
+            title: "Inscrição recebida!",
+            description: "Agora complete seu cadastro para receber as cartas.",
+          });
+          
+          // Redirect to registration with email in query params
+          setLocation(`/auth?email=${encodeURIComponent(data.email)}&tab=register`);
+        }
       } else {
-        // Novo usuário, redireciona para o registro
-        toast({
-          title: "Inscrição recebida!",
-          description: "Agora complete seu cadastro para receber as cartas.",
-        });
+        // Para ambiente de desenvolvimento, usamos apiRequest
+        console.log("Usando apiRequest para ambiente de desenvolvimento");
         
-        // Redirect to registration with email in query params
-        setLocation(`/auth?email=${encodeURIComponent(data.email)}&tab=register`);
+        // Registra o email no Supabase e verifica se já existe
+        const response = await apiRequest<{
+          message: string;
+          email: string;
+          redirect?: "login" | "register";
+        }>("POST", "/api/subscribe", data);
+        
+        // Prepara o redirecionamento com base na resposta da API
+        if (response.redirect === "login") {
+          // Usuário já existe, redireciona para login
+          toast({
+            title: "Usuário já cadastrado!",
+            description: "Faça login para acessar as cartas.",
+          });
+          
+          // Redirect to login with email in query params
+          setLocation(`/auth?email=${encodeURIComponent(data.email)}&tab=login`);
+        } else {
+          // Novo usuário, redireciona para o registro
+          toast({
+            title: "Inscrição recebida!",
+            description: "Agora complete seu cadastro para receber as cartas.",
+          });
+          
+          // Redirect to registration with email in query params
+          setLocation(`/auth?email=${encodeURIComponent(data.email)}&tab=register`);
+        }
       }
     } catch (error) {
       let errorMessage = "Ocorreu um erro. Tente novamente.";
@@ -66,6 +146,8 @@ const SubscriptionForm = () => {
       } else if (error && typeof error === 'object' && 'message' in error) {
         errorMessage = String(error.message);
       }
+      
+      console.error("Erro na inscrição:", error);
       
       toast({
         title: "Erro na inscrição",
