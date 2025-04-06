@@ -79,40 +79,101 @@ export default async function handler(req, res) {
     console.log(`Processando login para o email: ${email}`);
     
     // Inicializar cliente Supabase
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
+    
+    // Verificar se o cliente supabase está funcionando
+    console.log('Verificando acesso ao Supabase antes do login...');
+    try {
+      const { error: testError } = await supabase.from('account_user').select('count').limit(1);
+      if (testError) {
+        console.error('Erro ao acessar tabela account_user:', testError);
+        if (testError.code === '42501') {
+          console.error('ERRO DE PERMISSÃO: O serviço não tem permissões suficientes.');
+        }
+      } else {
+        console.log('Acesso à tabela account_user confirmado');
+      }
+    } catch (testCatchError) {
+      console.error('Exceção ao testar conexão com o Supabase:', testCatchError);
+    }
     
     // Fazer login com email e senha
+    console.log(`Tentando fazer login com email: ${email}`);
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
     if (error) {
-      console.error('Erro no login:', error);
+      console.error('Erro no login:', JSON.stringify(error));
       return res.status(401).json({
         error: 'Credenciais inválidas',
-        details: error.message
+        details: error.message,
+        code: error.code
       });
     }
+    
+    console.log(`Login autenticado com sucesso para: ${email}, ID: ${data.user.id}`);
 
     // Buscar informações adicionais do usuário
-    const { data: accountUser, error: accountError } = await supabase
-      .from('account_user')
-      .select('*')
-      .eq('user_id', data.user.id)
-      .single();
+    console.log(`Buscando informações da conta para usuário ID: ${data.user.id}`);
+    try {
+      const { data: accountUser, error: accountError } = await supabase
+        .from('account_user')
+        .select('*')
+        .eq('user_id', data.user.id)
+        .single();
 
-    if (accountError) {
-      console.error('Erro ao buscar perfil do usuário:', accountError);
-      // Continuar mesmo sem dados do perfil
+      if (accountError) {
+        console.error('Erro ao buscar perfil do usuário:', JSON.stringify(accountError));
+        // Tentar abordagem alternativa se for erro de não encontrado
+        if (accountError.code === 'PGRST116') {
+          console.log('Conta não encontrada pelo user_id, tentando buscar por email...');
+          
+          // Verificar por email como fallback
+          const { data: accountByEmail, error: emailError } = await supabase
+            .from('account_user')
+            .select('*')
+            .eq('email', email)
+            .single();
+            
+          if (emailError) {
+            console.error('Erro ao buscar perfil por email:', JSON.stringify(emailError));
+            // Alerta mas continua o login
+          } else if (accountByEmail) {
+            console.log(`Encontrado perfil via email: ${JSON.stringify(accountByEmail)}`);
+            return res.status(200).json({
+              message: "Login realizado com sucesso",
+              user: accountByEmail,
+              session: data.session
+            });
+          }
+        }
+      } else if (accountUser) {
+        console.log(`Perfil encontrado: ${JSON.stringify(accountUser)}`);
+        return res.status(200).json({
+          message: "Login realizado com sucesso",
+          user: accountUser,
+          session: data.session
+        });
+      }
+    } catch (profileError) {
+      console.error('Exceção ao buscar perfil:', profileError);
+      // Continuar mesmo com erro
     }
 
-    console.log(`Login bem sucedido para: ${email}`);
+    // Fallback para resposta sem perfil completo
+    console.log(`Login autenticado para ${email}, mas sem perfil completo encontrado`);
     
     return res.status(200).json({
+      message: "Login realizado com sucesso",
       user: data.user,
-      session: data.session,
-      accountUser: accountUser || null
+      session: data.session
     });
     
   } catch (error) {

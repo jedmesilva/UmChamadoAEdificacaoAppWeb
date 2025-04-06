@@ -88,7 +88,28 @@ export default async function handler(req, res) {
     console.log(`Processando registro para o email: ${email}`);
     
     // Inicializar cliente Supabase com SERVICE ROLE (bypass RLS)
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
+    
+    // Verificar se o cliente supabase está funcionando
+    console.log('Verificando acesso ao Supabase...');
+    try {
+      const { error: testError } = await supabase.from('account_user').select('count').limit(1);
+      if (testError) {
+        console.error('Erro ao acessar tabela account_user:', testError);
+        if (testError.code === '42501') {
+          console.error('ERRO DE PERMISSÃO: O serviço não tem permissões suficientes para acessar a tabela.');
+        }
+      } else {
+        console.log('Conectado ao Supabase com sucesso, acesso à tabela account_user confirmado');
+      }
+    } catch (testCatchError) {
+      console.error('Exceção ao testar conexão com o Supabase:', testCatchError);
+    }
     
     // 1. Verificar se o usuário já existe
     const { data: existingUser, error: userError } = await supabase
@@ -148,54 +169,83 @@ export default async function handler(req, res) {
     
     let accountUser;
     
-    if (existingAccount) {
-      // Atualizar o usuário existente
-      const { data: updatedUser, error: updateError } = await supabase
-        .from('account_user')
-        .update({
-          id: authUser.id, // Atualiza para usar o ID do auth.users 
-          user_id: authUser.id,
-          name,
-          status: 'active',
-          created_at: new Date().toISOString(), // Campo obrigatório
-        })
-        .eq('email', email)
-        .select()
-        .single();
+    try {
+      if (existingAccount) {
+        // Atualizar o usuário existente
+        console.log(`Atualizando account_user existente para ${email} com ID ${authUser.id}`);
+        const { data: updatedUser, error: updateError } = await supabase
+          .from('account_user')
+          .update({
+            id: authUser.id, // Atualiza para usar o ID do auth.users 
+            user_id: authUser.id,
+            name,
+            status: 'active',
+          })
+          .eq('email', email)
+          .select()
+          .single();
 
-      if (updateError) {
-        console.error('Erro ao atualizar conta existente:', updateError);
-        return res.status(500).json({
-          error: 'Erro ao atualizar conta existente',
-          details: updateError.message
-        });
-      }
-      
-      accountUser = updatedUser;
-    } else {
-      // Criar um novo account_user
-      const { data: newUser, error: insertError } = await supabase
-        .from('account_user')
-        .insert({
-          id: authUser.id, // Usando o mesmo ID do auth.users
-          user_id: authUser.id,
-          name,
-          email,
-          status: 'active',
-          created_at: new Date().toISOString(), // Campo obrigatório
-        })
-        .select()
-        .single();
+        if (updateError) {
+          console.error('Erro ao atualizar conta existente:', updateError);
+          throw new Error(`Erro ao atualizar conta existente: ${updateError.message}`);
+        }
+        
+        accountUser = updatedUser;
+        console.log(`Conta existente atualizada com sucesso: ${JSON.stringify(accountUser)}`);
+      } else {
+        // Criar um novo account_user
+        console.log(`Tentando criar novo account_user com ID ${authUser.id}`);
+        
+        // Primeira tentativa - usando o método padrão
+        const { data: newUser, error: insertError } = await supabase
+          .from('account_user')
+          .insert({
+            id: authUser.id,
+            user_id: authUser.id,
+            name,
+            email,
+            status: 'active',
+            created_at: new Date().toISOString(),
+          })
+          .select()
+          .single();
 
-      if (insertError) {
-        console.error('Erro ao criar conta de usuário:', insertError);
-        return res.status(500).json({
-          error: 'Erro ao criar conta de usuário',
-          details: insertError.message
-        });
+        if (insertError) {
+          console.error('Erro na primeira tentativa:', JSON.stringify(insertError));
+          
+          // Segunda tentativa - usando upsert
+          console.log('Tentando abordagem com upsert');
+          const { data: upsertUser, error: upsertError } = await supabase
+            .from('account_user')
+            .upsert({
+              id: authUser.id,
+              user_id: authUser.id,
+              name,
+              email,
+              status: 'active',
+              created_at: new Date().toISOString(),
+            })
+            .select()
+            .single();
+            
+          if (upsertError) {
+            console.error('Erro na segunda tentativa (upsert):', JSON.stringify(upsertError));
+            throw new Error(`Múltiplas falhas ao criar account_user: ${upsertError.message}`);
+          }
+          
+          accountUser = upsertUser;
+          console.log(`account_user criado com sucesso via upsert: ${JSON.stringify(accountUser)}`);
+        } else {
+          accountUser = newUser;
+          console.log(`account_user criado com sucesso: ${JSON.stringify(accountUser)}`);
+        }
       }
-      
-      accountUser = newUser;
+    } catch (dbError) {
+      console.error('Erro no processo de account_user:', dbError);
+      return res.status(500).json({
+        error: 'Erro ao processar conta de usuário',
+        details: dbError.message || String(dbError)
+      });
     }
     
     console.log(`Usuário cadastrado com sucesso: ${email}, ID: ${authUser.id}`);
