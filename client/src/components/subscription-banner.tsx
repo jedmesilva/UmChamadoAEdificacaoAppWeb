@@ -102,7 +102,7 @@ const SubscriptionBanner = ({ email, onSubscriptionComplete }: SubscriptionBanne
         <Button 
           onClick={handleSubscribe} 
           disabled={isLoading}
-          className="w-full sm:w-auto bg-teal-600 hover:bg-teal-700"
+          className="w-full sm:w-auto bg-teal-600 hover:bg-teal-700 text-white"
         >
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {isLoading ? 'Processando...' : 'Quero receber as cartas por email'}
