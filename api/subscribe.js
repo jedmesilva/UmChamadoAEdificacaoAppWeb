@@ -135,7 +135,8 @@ export default async function handler(req, res) {
           .from('subscription_um_chamado')
           .insert({
             email_subscription: email,
-            created_at: new Date().toISOString()
+            created_at: new Date().toISOString(),
+            status_subscription: 'is_subscription_um_chamado'
           });
         createSubError = createResult.error;
       } catch (err) {
@@ -183,7 +184,8 @@ export default async function handler(req, res) {
         .from('subscription_um_chamado')
         .insert({
           email_subscription: email,
-          created_at: new Date().toISOString()
+          created_at: new Date().toISOString(),
+          status_subscription: 'is_subscription_um_chamado'
         })
         .select()
         .single();
