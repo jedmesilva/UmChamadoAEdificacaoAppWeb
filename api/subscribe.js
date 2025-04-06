@@ -84,23 +84,32 @@ export default async function handler(req, res) {
     console.log(`Cliente Supabase inicializado para: ${email}`);
     
     // Verificar se o usuário já existe no Auth
-    const { data: user, error: userError } = await supabase
-      .auth.admin.getUserByEmail(email)
-      .catch(err => {
-        console.error('Erro ao verificar usuário na Auth API:', err);
-        return { data: null, error: err };
-      });
+    let user = null;
+    let userError = null;
+    try {
+      const authResult = await supabase.auth.admin.getUserByEmail(email);
+      user = authResult.data;
+      userError = authResult.error;
+    } catch (err) {
+      console.error('Erro ao verificar usuário na Auth API:', err);
+      userError = err;
+    }
     
     // Verificar se já existe uma inscrição
-    const { data: subscription, error: subError } = await supabase
-      .from('subscription_um_chamado')
-      .select('*')
-      .eq('email_subscription', email)
-      .single()
-      .catch(err => {
-        console.error('Erro ao verificar inscrição existente:', err);
-        return { data: null, error: err };
-      });
+    let subscription = null;
+    let subError = null;
+    try {
+      const subResult = await supabase
+        .from('subscription_um_chamado')
+        .select('*')
+        .eq('email_subscription', email)
+        .single();
+      subscription = subResult.data;
+      subError = subResult.error;
+    } catch (err) {
+      console.error('Erro ao verificar inscrição existente:', err);
+      subError = err;
+    }
     
     // Resultado para usuário já registrado
     if (user) {
@@ -120,15 +129,18 @@ export default async function handler(req, res) {
       
       // Se não tem inscrição, criar
       console.log(`Criando inscrição para usuário existente: ${email}`);
-      const { error: createSubError } = await supabase
-        .from('subscription_um_chamado')
-        .insert({
-          email_subscription: email
-        })
-        .catch(err => {
-          console.error('Erro ao criar inscrição para usuário existente:', err);
-          return { error: err };
-        });
+      let createSubError = null;
+      try {
+        const createResult = await supabase
+          .from('subscription_um_chamado')
+          .insert({
+            email_subscription: email
+          });
+        createSubError = createResult.error;
+      } catch (err) {
+        console.error('Erro ao criar inscrição para usuário existente:', err);
+        createSubError = err;
+      }
       
       if (createSubError) {
         console.error('Erro ao criar inscrição:', createSubError);
@@ -163,17 +175,22 @@ export default async function handler(req, res) {
     
     // Caso não exista nem usuário nem inscrição, criar nova inscrição
     console.log(`Criando nova inscrição para: ${email}`);
-    const { data: newSubscription, error: createError } = await supabase
-      .from('subscription_um_chamado')
-      .insert({
-        email_subscription: email
-      })
-      .select()
-      .single()
-      .catch(err => {
-        console.error('Erro crítico ao criar inscrição:', err);
-        return { data: null, error: err };
-      });
+    let newSubscription = null;
+    let createError = null;
+    try {
+      const createResult = await supabase
+        .from('subscription_um_chamado')
+        .insert({
+          email_subscription: email
+        })
+        .select()
+        .single();
+      newSubscription = createResult.data;
+      createError = createResult.error;
+    } catch (err) {
+      console.error('Erro crítico ao criar inscrição:', err);
+      createError = err;
+    }
     
     if (createError) {
       console.error('Erro ao criar inscrição:', createError);

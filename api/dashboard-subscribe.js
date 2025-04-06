@@ -83,19 +83,26 @@ export default async function handler(req, res) {
     console.log(`Cliente Supabase inicializado para inscrição do dashboard: ${email}`);
     
     // Verificar se já existe uma inscrição
-    const { data: existingSubscription, error: checkError } = await supabase
-      .from('subscription_um_chamado')
-      .select('*')
-      .eq('email_subscription', email)
-      .single()
-      .catch(err => {
-        console.error('Erro ao verificar inscrição existente:', err);
-        // Ignora erro PGRST116 (not found) pois é esperado quando não há inscrição
-        if (err.code === 'PGRST116') {
-          return { data: null, error: null };
-        }
-        return { data: null, error: err };
-      });
+    let existingSubscription = null;
+    let checkError = null;
+    try {
+      const subscriptionResult = await supabase
+        .from('subscription_um_chamado')
+        .select('*')
+        .eq('email_subscription', email)
+        .single();
+      
+      existingSubscription = subscriptionResult.data;
+      checkError = subscriptionResult.error;
+      
+      // Ignora erro PGRST116 (not found) pois é esperado quando não há inscrição
+      if (checkError && checkError.code === 'PGRST116') {
+        checkError = null;
+      }
+    } catch (err) {
+      console.error('Erro ao verificar inscrição existente:', err);
+      checkError = err;
+    }
     
     // Verificação de erro (exceto not found que já foi tratado acima)
     if (checkError) {
@@ -119,17 +126,23 @@ export default async function handler(req, res) {
     
     // Criar nova inscrição
     console.log(`Criando nova inscrição do dashboard para: ${email}`);
-    const { data: subscription, error: createError } = await supabase
-      .from('subscription_um_chamado')
-      .insert({
-        email_subscription: email
-      })
-      .select()
-      .single()
-      .catch(err => {
-        console.error('Erro crítico ao criar inscrição do dashboard:', err);
-        return { data: null, error: err };
-      });
+    let subscription = null;
+    let createError = null;
+    try {
+      const createResult = await supabase
+        .from('subscription_um_chamado')
+        .insert({
+          email_subscription: email
+        })
+        .select()
+        .single();
+      
+      subscription = createResult.data;
+      createError = createResult.error;
+    } catch (err) {
+      console.error('Erro crítico ao criar inscrição do dashboard:', err);
+      createError = err;
+    }
     
     if (createError) {
       console.error('Erro ao criar inscrição do dashboard:', createError);
