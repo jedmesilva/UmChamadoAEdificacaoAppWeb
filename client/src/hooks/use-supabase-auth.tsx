@@ -44,6 +44,37 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   const signIn = async (email: string, password: string) => {
     try {
       setIsLoading(true);
+      
+      try {
+        // Tentar usar a API personalizada primeiro (para Vercel)
+        const response = await apiRequest("POST", "/api/auth/login", {
+          email,
+          password,
+        });
+        
+        console.log("Login via API foi bem-sucedido:", response);
+        
+        // Verificar se o login foi bem-sucedido
+        if (response && response.user) {
+          // Atualizar o estado de autenticação localmente
+          await supabaseClient.auth.setSession({
+            access_token: response.session.access_token,
+            refresh_token: response.session.refresh_token,
+          });
+        }
+        
+        toast({
+          title: "Login realizado com sucesso",
+          description: "Bem-vindo de volta!",
+        });
+        
+        return;
+      } catch (apiError) {
+        console.log("Erro na API de login, tentando diretamente com Supabase:", apiError);
+        // Se falhar, cai no fallback direto com o Supabase
+      }
+      
+      // Fallback para o método direto do Supabase
       const { error } = await supabaseClient.auth.signInWithPassword({
         email,
         password,
