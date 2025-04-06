@@ -166,10 +166,13 @@ const HomePage = () => {
         console.log('Detalhes da resposta:', {
           hasSubscriptionStatus: data.hasSubscriptionStatus,
           isSubscribed: data.isSubscribed,
-          message: data.message
+          message: data.message,
+          statusField: data.statusField,
+          statusValue: data.statusValue
         });
         
         // Se a resposta indica que o usuário tem o status de inscrição confirmado
+        // Usamos comparação estrita (===) para evitar problemas de tipo
         if (data.hasSubscriptionStatus === true) {
           // Armazenamos no cache local para evitar futuras requisições
           localStorage.setItem(`${LOCAL_STORAGE_KEY}_${user.email}`, 'confirmed');
@@ -177,8 +180,10 @@ const HomePage = () => {
           setIsSubscribed(true);
         } else if (data.isSubscribed === true) {
           // Usuário está inscrito mas não tem o status confirmado
-          console.log('INSCRITO SEM STATUS: Usuário inscrito, mas sem status confirmado');
-          setIsSubscribed(false);
+          // Armazenamos no cache local de qualquer forma, já que o usuário está inscrito
+          localStorage.setItem(`${LOCAL_STORAGE_KEY}_${user.email}`, 'confirmed');
+          console.log('INSCRITO SEM STATUS: Usuário inscrito, considerando como inscrito');
+          setIsSubscribed(true); // <-- MUDAMOS DE false PARA true
         } else {
           // Usuário não está inscrito
           console.log('NÃO INSCRITO: Usuário não inscrito');
