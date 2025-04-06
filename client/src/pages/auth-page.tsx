@@ -196,8 +196,14 @@ const AuthPage = () => {
 
               <TabsContent value="register">
                 <div className="space-y-4">
-                  <h2 className="text-2xl font-bold font-heading text-center">Complete seu cadastro</h2>
-                  <p className="text-gray-600 text-center mb-6">Finalize seu cadastro para acessar as cartas do Chamado.</p>
+                  <h2 className="text-2xl font-bold font-heading text-center">
+                    {emailFromSubscription ? "Complete seu cadastro" : "Criar nova conta"}
+                  </h2>
+                  <p className="text-gray-600 text-center mb-6">
+                    {emailFromSubscription 
+                      ? "Finalize seu cadastro para acessar as cartas do Chamado." 
+                      : "Crie sua conta para acessar as cartas do Chamado à Edificação."}
+                  </p>
 
                   <Form {...registerForm}>
                     <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
@@ -272,7 +278,7 @@ const AuthPage = () => {
                         {isLoading ? (
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         ) : null}
-                        Finalizar Cadastro
+                        {emailFromSubscription ? "Finalizar Cadastro" : "Criar Conta"}
                       </Button>
                     </form>
                   </Form>

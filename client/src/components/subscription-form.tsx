@@ -89,6 +89,7 @@ const SubscriptionForm = () => {
                 <FormItem className="flex-grow">
                   <FormControl>
                     <Input
+                      type="email"
                       placeholder="Seu email"
                       className="px-4 py-3"
                       {...field}
