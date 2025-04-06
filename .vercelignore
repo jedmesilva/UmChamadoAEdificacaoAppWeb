@@ -52,3 +52,12 @@ attached_assets/
 README.md
 LICENSE
 *.example
+node_modules
+.env
+.env.*
+server
+api
+lib
+shared
+.git
+*.log
