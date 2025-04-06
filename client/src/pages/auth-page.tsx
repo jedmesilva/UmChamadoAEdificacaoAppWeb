@@ -21,13 +21,8 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
-// Register schema - extends the insert user schema with password confirmation
-const registerSchema = insertUserSchema.extend({
-  confirmPassword: z.string().min(1, "Confirmação de senha é obrigatória"),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "As senhas não coincidem",
-  path: ["confirmPassword"],
-});
+// Register schema - extends the insert user schema
+const registerSchema = insertUserSchema;
 
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
@@ -38,7 +33,6 @@ const AuthPage = () => {
   const [emailFromSubscription, setEmailFromSubscription] = useState<string>("");
   const [showLoginPassword, setShowLoginPassword] = useState<boolean>(false);
   const [showRegisterPassword, setShowRegisterPassword] = useState<boolean>(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
 
   // Login form
   const loginForm = useForm<LoginFormValues>({
@@ -56,7 +50,6 @@ const AuthPage = () => {
       name: "",
       email: emailFromSubscription,
       password: "",
-      confirmPassword: "",
     },
   });
 
@@ -116,11 +109,8 @@ const AuthPage = () => {
 
   const onRegisterSubmit = async (data: RegisterFormValues) => {
     try {
-      // Remove confirmPassword as it's not needed for signup
-      const { confirmPassword, ...userData } = data;
-      await signUp(userData.email, userData.password, userData.name);
-      // Não precisa mais mudar para a aba de login nem resetar o formulário
-      // porque o usuário já será redirecionado automaticamente após o login
+      await signUp(data.email, data.password, data.name);
+      // Usuário será redirecionado automaticamente após o login
     } catch (error) {
       console.error("Erro durante o registro:", error);
     }
@@ -267,35 +257,6 @@ const AuthPage = () => {
                                 onClick={() => setShowRegisterPassword(!showRegisterPassword)}
                               >
                                 {showRegisterPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                              </Button>
-                            </div>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={registerForm.control}
-                        name="confirmPassword"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Confirmar Senha</FormLabel>
-                            <div className="relative">
-                              <FormControl>
-                                <Input 
-                                  type={showConfirmPassword ? "text" : "password"} 
-                                  placeholder="Confirme sua senha" 
-                                  {...field} 
-                                />
-                              </FormControl>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="absolute right-0 top-0 h-full px-3 py-2 text-gray-400 hover:text-gray-600"
-                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                              >
-                                {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                               </Button>
                             </div>
                             <FormMessage />
