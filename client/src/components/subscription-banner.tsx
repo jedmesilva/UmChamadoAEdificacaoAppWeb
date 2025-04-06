@@ -27,28 +27,66 @@ const SubscriptionBanner = ({ email, onSubscriptionComplete }: SubscriptionBanne
       
       console.log(`Ambiente: ${isProduction ? 'produção' : 'desenvolvimento'}`);
       
-      let response;
+      let response: Response | undefined;
+      let retry = false;
+      let attempts = 0;
       
-      if (isProduction) {
-        // Em produção usamos sempre /api/subscribe que é um endpoint no vercel.json
-        console.log('Usando endpoint de produção: /api/subscribe');
-        response = await fetch('/api/subscribe', {
+      // Função para tentar fazer a requisição com diferentes endpoints
+      const attemptRequest = async (endpoint: string) => {
+        console.log(`Tentativa ${attempts + 1} usando endpoint: ${endpoint}`);
+        return fetch(endpoint, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({ email }),
         });
-      } else {
-        // Em desenvolvimento usamos a rota do Express backend
-        console.log('Usando endpoint de desenvolvimento: /api/dashboard-subscribe');
-        response = await fetch('/api/dashboard-subscribe', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ email }),
-        });
+      };
+      
+      do {
+        retry = false;
+        attempts++;
+        
+        try {
+          if (isProduction) {
+            // Em produção tentamos primeiro com o endpoint específico dashboard-subscribe
+            if (attempts === 1) {
+              console.log('Usando endpoint específico dashboard-subscribe');
+              response = await attemptRequest('/api/dashboard-subscribe');
+            } else {
+              // Na segunda tentativa, usamos o endpoint genérico subscribe
+              console.log('Tentando endpoint alternativo subscribe');
+              response = await attemptRequest('/api/subscribe');
+            }
+          } else {
+            // Em desenvolvimento usamos a rota do Express backend
+            console.log('Ambiente de desenvolvimento: usando endpoint do Express');
+            response = await attemptRequest('/api/dashboard-subscribe');
+          }
+          
+          // Se a resposta for 405 (Method Not Allowed) e estamos em produção
+          // tentamos com outro endpoint
+          if (response && response.status === 405 && isProduction && attempts === 1) {
+            console.warn('Erro 405 detectado, tentando endpoint alternativo...');
+            retry = true;
+            continue;
+          }
+        } catch (networkError) {
+          console.error('Erro de rede ao fazer requisição:', networkError);
+          
+          // Se houver erro de rede e estamos em produção, tentamos outro endpoint
+          if (isProduction && attempts === 1) {
+            console.warn('Erro de rede detectado, tentando endpoint alternativo...');
+            retry = true;
+            continue;
+          }
+          throw networkError;
+        }
+      } while (retry && attempts < 2);
+      
+      // Se não temos resposta, algo deu muito errado
+      if (!response) {
+        throw new Error('Não foi possível conectar ao servidor. Tente novamente mais tarde.');
       }
       
       // Verificar se a resposta é válida antes de tentar parsear o JSON
@@ -82,6 +120,7 @@ const SubscriptionBanner = ({ email, onSubscriptionComplete }: SubscriptionBanne
       let data;
       try {
         data = JSON.parse(responseText);
+        console.log('Resposta do servidor:', data);
       } catch (error) {
         console.error('Erro ao parsear resposta JSON:', error, 'Texto recebido:', responseText);
         throw new Error(`Erro ao processar dados da inscrição: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
@@ -90,7 +129,7 @@ const SubscriptionBanner = ({ email, onSubscriptionComplete }: SubscriptionBanne
       // Mostra toast de sucesso
       toast({
         title: "Sucesso!",
-        description: "Você agora receberá as cartas por email.",
+        description: data.message || "Você agora receberá as cartas por email.",
         variant: "default",
       });
       

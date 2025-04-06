@@ -35,17 +35,65 @@ const SubscriptionForm = () => {
       const isProduction = window.location.hostname.includes('.vercel.app') || 
                          window.location.hostname.includes('.replit.app');
       
+      console.log(`Ambiente: ${isProduction ? 'produção' : 'desenvolvimento'}`);
+      
       if (isProduction) {
-        // Para ambiente de produção, usamos fetch diretamente
-        console.log("Usando fetch direto para ambiente de produção");
+        // Para ambiente de produção
+        let response: Response | undefined;
+        let retry = false;
+        let attempts = 0;
         
-        const response = await fetch('/api/subscribe', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(data),
-        });
+        // Função para tentar fazer a requisição com diferentes endpoints
+        const attemptRequest = async (endpoint: string) => {
+          console.log(`Tentativa ${attempts + 1} usando endpoint: ${endpoint}`);
+          return fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data),
+          });
+        };
+        
+        do {
+          retry = false;
+          attempts++;
+          
+          try {
+            // Em produção tentamos primeiro com endpoint específico
+            if (attempts === 1) {
+              console.log('Usando endpoint específico subscribe');
+              response = await attemptRequest('/api/subscribe');
+            } else {
+              // Na segunda tentativa, usamos index.js genérico como fallback
+              console.log('Tentando endpoint genérico');
+              response = await attemptRequest('/api?path=subscribe');
+            }
+            
+            // Se a resposta for 405 (Method Not Allowed) e estamos em produção
+            // tentamos com outro endpoint
+            if (response && response.status === 405 && attempts === 1) {
+              console.warn('Erro 405 detectado, tentando endpoint alternativo...');
+              retry = true;
+              continue;
+            }
+          } catch (networkError) {
+            console.error('Erro de rede ao fazer requisição:', networkError);
+            
+            // Se houver erro de rede e estamos em produção, tentamos outro endpoint
+            if (attempts === 1) {
+              console.warn('Erro de rede detectado, tentando endpoint alternativo...');
+              retry = true;
+              continue;
+            }
+            throw networkError;
+          }
+        } while (retry && attempts < 2);
+        
+        // Se não temos resposta, algo deu muito errado
+        if (!response) {
+          throw new Error('Não foi possível conectar ao servidor. Tente novamente mais tarde.');
+        }
         
         // Verificar se a resposta é válida antes de tentar parsear o JSON
         if (!response.ok) {
@@ -74,6 +122,7 @@ const SubscriptionForm = () => {
         let responseData;
         try {
           responseData = JSON.parse(responseText);
+          console.log('Resposta do servidor:', responseData);
         } catch (error) {
           console.error('Erro ao parsear resposta JSON:', error, 'Texto recebido:', responseText);
           // Mesmo com erro no parsing, redirecionamos para o registro
