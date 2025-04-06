@@ -132,7 +132,8 @@ export default async function handler(req, res) {
       const createResult = await supabase
         .from('subscription_um_chamado')
         .insert({
-          email_subscription: email
+          email_subscription: email,
+          created_at: new Date().toISOString()
         })
         .select()
         .single();
