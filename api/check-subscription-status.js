@@ -94,17 +94,30 @@ export default async function handler(req, res) {
       });
     }
     
-    // Inscrição encontrada
-    const hasSubscriptionStatus = !!subscription.status_subscription && 
-                                 subscription.status_subscription === 'is_subscription_um_chamado';
+    // Inscrição encontrada - Log detalhado dos dados
+    console.log('Dados da inscrição encontrada:', JSON.stringify(subscription, null, 2));
     
-    console.log(`Status de inscrição para ${email}: ${hasSubscriptionStatus ? 'Inscrito' : 'Sem status definido'}`);
+    // Verificação rigorosa da presença do campo status_subscription
+    const hasStatusField = typeof subscription.status_subscription !== 'undefined' && 
+                           subscription.status_subscription !== null;
+                           
+    const hasCorrectStatus = hasStatusField && 
+                            subscription.status_subscription === 'is_subscription_um_chamado';
+    
+    console.log(`Status de inscrição para ${email}:`, {
+      hasStatusField, 
+      statusValue: subscription.status_subscription,
+      hasCorrectStatus,
+      finalResult: hasCorrectStatus ? 'CONFIRMADO' : 'SEM STATUS CONFIRMADO'
+    });
     
     return res.status(200).json({
       success: true,
       isSubscribed: true,
-      hasSubscriptionStatus: hasSubscriptionStatus,
-      message: hasSubscriptionStatus 
+      hasSubscriptionStatus: hasCorrectStatus,
+      statusField: hasStatusField,
+      statusValue: subscription.status_subscription,
+      message: hasCorrectStatus 
         ? 'Usuário inscrito com status confirmado' 
         : 'Usuário inscrito, mas sem status confirmado'
     });

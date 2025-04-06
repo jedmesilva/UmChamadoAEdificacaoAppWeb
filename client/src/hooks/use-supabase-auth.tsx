@@ -138,6 +138,14 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       try {
         // Primeira tentativa: usar a API personalizada
         console.log("Tentando registro via API em: /api/auth/register");
+        
+        // Adicionar log detalhado dos dados sendo enviados
+        console.log("Dados sendo enviados para registro:", { 
+          email, 
+          name,
+          password: password ? "***" : null 
+        });
+        
         const response = await fetch("/api/auth/register", {
           method: "POST",
           headers: {
@@ -151,14 +159,25 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
           credentials: "include"
         });
         
-        if (!response.ok) {
-          const errorData = await response.text();
-          console.error(`Erro na API de registro: ${response.status} - ${errorData}`);
-          throw new Error(`Erro no registro: ${response.status} - ${errorData || response.statusText}`);
+        // Log da resposta para melhor análise
+        console.log(`Resposta do servidor: ${response.status} ${response.statusText}`);
+        
+        let responseData;
+        const responseText = await response.text();
+        
+        try {
+          if (responseText) {
+            responseData = JSON.parse(responseText);
+            console.log("Resposta parseada do servidor:", responseData);
+          }
+        } catch (parseError) {
+          console.error("Erro ao parsear resposta:", parseError, "Texto da resposta:", responseText);
         }
         
-        const data = await response.json();
-        console.log("Resposta do servidor:", data);
+        if (!response.ok) {
+          console.error(`Erro na API de registro: ${response.status} - ${responseText}`);
+          throw new Error(`Erro no registro: ${response.status} - ${responseText || response.statusText}`);
+        }
         
         toast({
           title: "Cadastro realizado com sucesso",

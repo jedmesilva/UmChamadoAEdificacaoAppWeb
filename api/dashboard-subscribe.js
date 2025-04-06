@@ -116,8 +116,24 @@ export default async function handler(req, res) {
     
     // Se já estiver inscrito, verifica o status
     if (existingSubscription) {
+      // Log detalhado dos dados da inscrição
+      console.log('Dados detalhados da inscrição existente:', JSON.stringify(existingSubscription, null, 2));
+      
+      // Verificação rigorosa do status
+      const hasStatusField = typeof existingSubscription.status_subscription !== 'undefined' && 
+                            existingSubscription.status_subscription !== null;
+                            
+      const hasCorrectStatus = hasStatusField && 
+                             existingSubscription.status_subscription === 'is_subscription_um_chamado';
+      
+      console.log(`Verificação de status para ${email}:`, {
+        hasStatusField,
+        statusValue: existingSubscription.status_subscription,
+        hasCorrectStatus
+      });
+      
       // Se já tiver o status correto, retorna sucesso
-      if (existingSubscription.status_subscription === 'is_subscription_um_chamado') {
+      if (hasCorrectStatus) {
         console.log(`Usuário já está inscrito com status confirmado: ${email}`);
         return res.status(200).json({
           success: true,

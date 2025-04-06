@@ -162,19 +162,26 @@ const HomePage = () => {
           throw new Error(`Erro ao processar dados: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
         }
         
+        // Adicionar mais logs para debug
+        console.log('Detalhes da resposta:', {
+          hasSubscriptionStatus: data.hasSubscriptionStatus,
+          isSubscribed: data.isSubscribed,
+          message: data.message
+        });
+        
         // Se a resposta indica que o usuário tem o status de inscrição confirmado
-        if (data.hasSubscriptionStatus) {
+        if (data.hasSubscriptionStatus === true) {
           // Armazenamos no cache local para evitar futuras requisições
           localStorage.setItem(`${LOCAL_STORAGE_KEY}_${user.email}`, 'confirmed');
-          console.log('Status confirmado armazenado no cache local');
+          console.log('CONFIRMADO: Status confirmado armazenado no cache local');
           setIsSubscribed(true);
-        } else if (data.isSubscribed) {
+        } else if (data.isSubscribed === true) {
           // Usuário está inscrito mas não tem o status confirmado
-          console.log('Usuário inscrito, mas sem status confirmado');
+          console.log('INSCRITO SEM STATUS: Usuário inscrito, mas sem status confirmado');
           setIsSubscribed(false);
         } else {
           // Usuário não está inscrito
-          console.log('Usuário não inscrito');
+          console.log('NÃO INSCRITO: Usuário não inscrito');
           setIsSubscribed(false);
         }
       } catch (error) {
