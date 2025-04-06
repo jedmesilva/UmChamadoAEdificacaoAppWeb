@@ -7,6 +7,7 @@ import HomePage from "@/pages/home-page";
 import AuthPage from "@/pages/auth-page";
 import LandingPage from "@/pages/landing-page";
 import LetterPage from "@/pages/letter-page";
+import DeployInfo from "@/pages/deploy-info";
 import { ProtectedRoute } from "./lib/protected-route";
 import { SupabaseAuthProvider } from "./hooks/use-supabase-auth";
 
@@ -15,6 +16,7 @@ function Router() {
     <Switch>
       <Route path="/" component={LandingPage} />
       <Route path="/auth" component={AuthPage} />
+      <Route path="/deploy-info" component={DeployInfo} />
       <ProtectedRoute path="/dashboard" component={HomePage} />
       <ProtectedRoute path="/letter/:id" component={LetterPage} />
       <Route component={NotFound} />
