@@ -68,8 +68,8 @@ const SubscriptionBanner = ({ email, onSubscriptionComplete }: SubscriptionBanne
 
   if (isSuccess) {
     return (
-      <Alert className="mb-6 bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800">
-        <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-500" />
+      <Alert className="mb-6 bg-teal-50 border-teal-200 dark:bg-teal-900/20 dark:border-teal-800">
+        <CheckCircle2 className="h-4 w-4 text-teal-600 dark:text-teal-500" />
         <AlertTitle>Inscrição confirmada!</AlertTitle>
         <AlertDescription>
           Você agora receberá as cartas diretamente no seu email.
@@ -79,7 +79,7 @@ const SubscriptionBanner = ({ email, onSubscriptionComplete }: SubscriptionBanne
   }
 
   return (
-    <Card className="mb-6 border-amber-100 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800">
+    <Card className="mb-6 border-teal-100 bg-teal-50 dark:bg-teal-900/20 dark:border-teal-800">
       <CardHeader className="pb-2">
         <CardTitle className="text-xl">Receba as cartas por email</CardTitle>
         <CardDescription>
@@ -102,7 +102,7 @@ const SubscriptionBanner = ({ email, onSubscriptionComplete }: SubscriptionBanne
         <Button 
           onClick={handleSubscribe} 
           disabled={isLoading}
-          className="w-full sm:w-auto"
+          className="w-full sm:w-auto bg-teal-600 hover:bg-teal-700"
         >
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {isLoading ? 'Processando...' : 'Quero receber as cartas por email'}
