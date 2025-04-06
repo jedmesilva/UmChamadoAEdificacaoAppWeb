@@ -1,4 +1,5 @@
 // API principal para Vercel Serverless
+// Este arquivo usa a sintaxe ESM devido ao "type": "module" no package.json
 
 import { createClient } from '@supabase/supabase-js';
 

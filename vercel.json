@@ -1,7 +1,7 @@
 
 {
   "framework": "vite",
-  "buildCommand": "node vercel-build.js",
+  "buildCommand": "node vercel-build.cjs",
   "outputDirectory": "dist",
   "headers": [
     {
