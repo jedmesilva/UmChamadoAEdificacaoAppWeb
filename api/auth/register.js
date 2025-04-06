@@ -88,11 +88,14 @@ export default async function handler(req, res) {
       });
     }
     
-    // 2. Criar o usuário na tabela auth.users
+    // 2. Criar o usuário na tabela auth.users com metadados
     const { data: authUserData, error: signUpError } = await supabase.auth.admin.createUser({
       email,
       password,
       email_confirm: true, // Confirma o email automaticamente
+      user_metadata: {
+        name: name,
+      },
     });
 
     if (signUpError) {

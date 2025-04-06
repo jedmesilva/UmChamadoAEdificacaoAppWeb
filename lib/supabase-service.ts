@@ -7,11 +7,14 @@ export const authService = {
   // Registra um novo usuário com email e senha
   async signUp(email: string, password: string, name: string): Promise<any> {
     try {
-      // 1. Cria o usuário na tabela auth.users
+      // 1. Cria o usuário na tabela auth.users com metadados
       const { data: authUser, error: signUpError } = await supabaseAdmin.auth.admin.createUser({
         email,
         password,
         email_confirm: true, // Confirma o email automaticamente
+        user_metadata: {
+          name: name,
+        },
       });
 
       if (signUpError) throw signUpError;
@@ -122,11 +125,14 @@ export const authService = {
 
       if (searchError) throw searchError;
 
-      // 2. Cria o usuário na tabela auth.users
+      // 2. Cria o usuário na tabela auth.users com metadados
       const { data: authUser, error: signUpError } = await supabaseAdmin.auth.admin.createUser({
         email,
         password,
         email_confirm: true,
+        user_metadata: {
+          name: name,
+        },
       });
 
       if (signUpError) throw signUpError;
