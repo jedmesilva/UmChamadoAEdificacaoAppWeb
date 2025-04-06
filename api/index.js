@@ -26,8 +26,10 @@ export default async function handler(req, res) {
   console.log(`Processando requisição: ${req.method} ${url}`);
 
   // Configurar cliente Supabase
-  const supabaseUrl = process.env.VITE_SUPABASE_URL;
-  const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+
+  console.log(`Configurando Supabase com URL: ${supabaseUrl ? 'disponível' : 'não disponível'}, KEY: ${supabaseKey ? 'disponível' : 'não disponível'}`);
   
   if (!supabaseUrl || !supabaseKey) {
     console.error('Configuração do Supabase não encontrada no ambiente');
@@ -298,6 +300,12 @@ export default async function handler(req, res) {
         message: 'Inscrição realizada com sucesso',
         subscription
       });
+    }
+    
+    // Essa parte foi movida para o início da função, aqui está apenas para compatibilidade
+    if (req.method === 'OPTIONS') {
+      console.log(`Tratando requisição OPTIONS para: ${url} (já processada no início da handler)`);
+      return res.status(200).end();
     }
     
     // Resposta padrão se nenhuma rota corresponder

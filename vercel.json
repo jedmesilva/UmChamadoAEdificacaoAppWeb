@@ -13,6 +13,51 @@
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
       ]
+    },
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET, POST, PUT, DELETE, OPTIONS" },
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization" }
+      ]
+    }
+  ],
+  "routes": [
+    { 
+      "src": "/api/subscribe", 
+      "methods": ["POST", "OPTIONS"],
+      "dest": "/api/index.js" 
+    },
+    { 
+      "src": "/api/dashboard-subscribe", 
+      "methods": ["POST", "OPTIONS"],
+      "dest": "/api/index.js" 
+    },
+    { 
+      "src": "/api/check-subscription", 
+      "methods": ["GET", "OPTIONS"],
+      "dest": "/api/index.js" 
+    },
+    { 
+      "src": "/api/cartas", 
+      "methods": ["GET", "OPTIONS"],
+      "dest": "/api/index.js" 
+    },
+    { 
+      "src": "/api/cartas/(\\d+)", 
+      "methods": ["GET", "OPTIONS"],
+      "dest": "/api/index.js" 
+    },
+    { 
+      "src": "/api/cartas/registrar-leitura", 
+      "methods": ["POST", "OPTIONS"],
+      "dest": "/api/index.js" 
+    },
+    { 
+      "src": "/api/status", 
+      "methods": ["GET", "OPTIONS"],
+      "dest": "/api/index.js" 
     }
   ]
 }
