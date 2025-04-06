@@ -25,18 +25,31 @@ const SubscriptionBanner = ({ email, onSubscriptionComplete }: SubscriptionBanne
       const isProduction = window.location.hostname.includes('.vercel.app') || 
                          window.location.hostname.includes('.replit.app');
       
-      // Usar a rota correta com base no ambiente
-      const apiUrl = isProduction ? '/api/subscribe' : '/api/dashboard-subscribe';
+      console.log(`Ambiente: ${isProduction ? 'produção' : 'desenvolvimento'}`);
       
-      console.log(`Usando API URL: ${apiUrl} para ambiente: ${isProduction ? 'produção' : 'desenvolvimento'}`);
+      let response;
       
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email }),
-      });
+      if (isProduction) {
+        // Em produção usamos sempre /api/subscribe que é um endpoint no vercel.json
+        console.log('Usando endpoint de produção: /api/subscribe');
+        response = await fetch('/api/subscribe', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email }),
+        });
+      } else {
+        // Em desenvolvimento usamos a rota do Express backend
+        console.log('Usando endpoint de desenvolvimento: /api/dashboard-subscribe');
+        response = await fetch('/api/dashboard-subscribe', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email }),
+        });
+      }
       
       // Verificar se a resposta é válida antes de tentar parsear o JSON
       if (!response.ok) {
