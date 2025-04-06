@@ -93,6 +93,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Rota para login com Supabase
+  app.post("/api/auth/login", async (req, res, next) => {
+    try {
+      const { email, password } = req.body;
+      
+      if (!email || !password) {
+        console.warn("Tentativa de login sem email ou senha");
+        return res.status(400).json({ 
+          message: "Email e senha são obrigatórios" 
+        });
+      }
+      
+      console.log(`Tentativa de login para email: ${email}`);
+      
+      try {
+        // Usar o serviço do Supabase para autenticação
+        const result = await authService.signIn(email, password);
+        
+        if (result.error) {
+          console.error(`Erro no login: ${result.error.message}`);
+          return res.status(401).json({ 
+            message: "Credenciais inválidas",
+            details: result.error.message
+          });
+        }
+        
+        // Obter mais detalhes do usuário autenticado
+        const user = await authService.getUserByEmail(email);
+        
+        console.log(`Login bem-sucedido para: ${email}, ID: ${result.user?.id}`);
+        
+        return res.status(200).json({
+          message: "Login realizado com sucesso",
+          user: user || result.user,
+          session: result.session
+        });
+      } catch (error: any) {
+        console.error(`Erro ao processar login via Supabase: ${error.message}`);
+        return res.status(500).json({ 
+          message: "Erro ao processar login", 
+          details: error.message 
+        });
+      }
+    } catch (error) {
+      console.error("Erro geral na rota de login:", error);
+      next(error);
+    }
+  });
+  
   // Rota para registro de usuários com perfil no account_user
   app.post("/api/auth/register", async (req, res, next) => {
     try {
@@ -155,7 +204,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Rota para verificar se o usuário está inscrito
+  // Rota para verificar status de subscrição (POST)
+  app.post("/api/check-subscription-status", async (req, res, next) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email || typeof email !== 'string') {
+        console.warn('Email inválido para verificação de status:', email);
+        return res.status(400).json({
+          success: false,
+          message: 'Email inválido. Por favor, forneça um email válido'
+        });
+      }
+      
+      console.log(`Verificando status de inscrição para: ${email}`);
+      
+      try {
+        // Verificar se o usuário já está inscrito
+        const subscription = await subscriptionService.checkSubscription(email);
+        
+        if (!subscription) {
+          console.log(`Inscrição não encontrada para: ${email}`);
+          return res.status(200).json({
+            success: true,
+            isSubscribed: false,
+            hasSubscriptionStatus: false,
+            message: 'Usuário não inscrito'
+          });
+        }
+        
+        // Inscrição encontrada - Log detalhado dos dados
+        console.log('Dados da inscrição encontrada:', JSON.stringify(subscription, null, 2));
+        
+        // Verificação da presença do campo status_subscription
+        const hasStatusField = typeof subscription.status_subscription !== 'undefined' && 
+                              subscription.status_subscription !== null;
+                              
+        const hasCorrectStatus = hasStatusField && 
+                                subscription.status_subscription === 'is_subscription_um_chamado';
+        
+        return res.status(200).json({
+          success: true,
+          isSubscribed: true,
+          hasSubscriptionStatus: true,
+          statusField: hasStatusField,
+          statusValue: subscription.status_subscription,
+          message: 'Usuário inscrito com status confirmado'
+        });
+        
+      } catch (error: any) {
+        console.error('Erro ao verificar status de inscrição:', error);
+        return res.status(500).json({ 
+          success: false,
+          error: 'Erro interno do servidor', 
+          message: 'Não foi possível verificar o status da inscrição',
+          details: error.message || String(error)
+        });
+      }
+    } catch (error) {
+      console.error('Erro crítico ao verificar status de inscrição:', error);
+      next(error);
+    }
+  });
+  
+  // Rota GET antiga para verificar se o usuário está inscrito (mantida para compatibilidade)
   app.get("/api/check-subscription", async (req, res, next) => {
     try {
       const { email } = req.query;

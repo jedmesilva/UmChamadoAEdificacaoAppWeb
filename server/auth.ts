@@ -113,13 +113,29 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/login", (req, res, next) => {
+    console.log("Recebida requisição para /api/login com corpo:", JSON.stringify(req.body, null, 2));
+    
     passport.authenticate("local", (err: any, user: any, info: any) => {
-      if (err) return next(err);
-      if (!user) return res.status(401).json({ message: info?.message || "Credenciais inválidas" });
+      if (err) {
+        console.error("Erro na autenticação:", err);
+        return next(err);
+      }
+      
+      if (!user) {
+        console.warn("Autenticação falhou por credenciais inválidas:", info);
+        return res.status(401).json({ message: info?.message || "Credenciais inválidas" });
+      }
+      
+      console.log(`Usuário autenticado com sucesso: ${user.email} (ID: ${user.id})`);
       
       req.login(user, (loginErr) => {
-        if (loginErr) return next(loginErr);
+        if (loginErr) {
+          console.error("Erro ao fazer login na sessão:", loginErr);
+          return next(loginErr);
+        }
+        
         const { password, ...userWithoutPassword } = user;
+        console.log("Enviando resposta de login com sucesso para:", user.email);
         res.status(200).json(userWithoutPassword);
       });
     })(req, res, next);

@@ -16,6 +16,16 @@ export function normalizeApiUrl(url: string): string {
     console.log(`Ambiente de produção: mantendo URL original: ${url}`);
     return url;
   }
+  
+  // Fix para garantir que todas as chamadas de API vão para o servidor Node.js e não para o Vite
+  // Se a URL começa com /api, garantimos que não seja interceptada pelo Vite
+  if (url.startsWith('/api')) {
+    const apiUrl = `/api${url.substring(4)}`;
+    console.log(`Normalizando URL da API: ${url} -> ${apiUrl}`);
+    return apiUrl;
+  }
+  
+  console.log(`Mantendo URL original: ${url}`);
   return url;
 }
 
