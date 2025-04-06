@@ -49,6 +49,47 @@ export default async function handler(req, res) {
       });
     }
     
+    // Rota para verificar se o usuário está inscrito
+    if (url.startsWith('/check-subscription') && req.method === 'GET') {
+      const params = new URLSearchParams(url.split('?')[1] || '');
+      const email = params.get('email');
+      
+      if (!email) {
+        return res.status(400).json({ 
+          message: "Email é obrigatório",
+          isSubscribed: false 
+        });
+      }
+      
+      try {
+        // Verificar se o usuário já está inscrito
+        const { data: subscription, error } = await supabase
+          .from('subscription_um_chamado')
+          .select('*')
+          .eq('email_subscription', email)
+          .single();
+        
+        if (error && error.code !== 'PGRST116') {
+          console.error("Erro ao verificar subscrição:", error);
+          return res.status(200).json({
+            isSubscribed: false,
+            error: error.message
+          });
+        }
+        
+        return res.status(200).json({
+          isSubscribed: !!subscription,
+          subscription: subscription || null
+        });
+      } catch (error) {
+        console.error("Erro ao verificar subscrição:", error);
+        return res.status(200).json({ 
+          isSubscribed: false,
+          error: error.message 
+        });
+      }
+    }
+    
     // Rota para obter todas as cartas
     if (url === '/cartas' && req.method === 'GET') {
       console.log('Buscando todas as cartas...');
@@ -194,6 +235,68 @@ export default async function handler(req, res) {
         message: 'Email registrado com sucesso',
         email,
         redirect: 'register'
+      });
+    }
+    
+    // Rota para inscrição diretamente do dashboard
+    if (url === '/dashboard-subscribe' && req.method === 'POST') {
+      const { email } = req.body || {};
+      
+      if (!email) {
+        return res.status(400).json({ 
+          error: 'Email é obrigatório' 
+        });
+      }
+      
+      console.log(`Processando inscrição do dashboard para o email: ${email}`);
+      
+      // Verificar se já existe uma inscrição
+      const { data: existingSubscription, error: checkError } = await supabase
+        .from('subscription_um_chamado')
+        .select('*')
+        .eq('email_subscription', email)
+        .single();
+      
+      if (checkError && checkError.code !== 'PGRST116') {
+        console.error('Erro ao verificar inscrição existente:', checkError);
+        return res.status(500).json({
+          success: false,
+          message: 'Erro ao verificar inscrição',
+          details: checkError.message
+        });
+      }
+      
+      if (existingSubscription) {
+        // Se já estiver inscrito, retorna sucesso
+        return res.status(200).json({
+          success: true,
+          message: 'Usuário já está inscrito',
+          subscription: existingSubscription
+        });
+      }
+      
+      // Criar nova inscrição
+      const { data: subscription, error: createError } = await supabase
+        .from('subscription_um_chamado')
+        .insert({
+          email_subscription: email
+        })
+        .select()
+        .single();
+      
+      if (createError) {
+        console.error('Erro ao criar inscrição do dashboard:', createError);
+        return res.status(500).json({
+          success: false,
+          message: 'Erro ao processar inscrição',
+          details: createError.message
+        });
+      }
+      
+      return res.status(201).json({
+        success: true,
+        message: 'Inscrição realizada com sucesso',
+        subscription
       });
     }
     
