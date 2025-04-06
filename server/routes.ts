@@ -110,9 +110,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Completar o registro do usuário, criando a conta e o perfil
         const result = await authService.completeRegistration(email, name, password);
         
+        // Log detalhado para depuração
+        console.log(`Usuário cadastrado com sucesso: ${email}, ID: ${result.authUser.id}`);
+        console.log(`Detalhes conta: ${JSON.stringify(result.accountUser)}`);
+        
         res.status(201).json({ 
           message: "Usuário criado com sucesso",
-          userId: result.authUser.id
+          userId: result.authUser.id,
+          email: result.authUser.email,
+          name: result.accountUser.name,
+          accountUser: result.accountUser // Incluindo os dados da tabela account_user
         });
       } catch (error: any) {
         console.error("Erro ao registrar usuário:", error);

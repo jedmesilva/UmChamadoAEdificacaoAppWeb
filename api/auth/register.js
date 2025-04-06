@@ -175,12 +175,15 @@ export default async function handler(req, res) {
       accountUser = newUser;
     }
     
-    console.log(`Usuário cadastrado com sucesso: ${email}`);
+    console.log(`Usuário cadastrado com sucesso: ${email}, ID: ${authUser.id}`);
+    console.log(`Conta de usuário: ${JSON.stringify(accountUser)}`);
     
     return res.status(201).json({
       message: "Usuário criado com sucesso",
-      userId: authUser.id,
-      email: authUser.email
+      userId: authUser.id, 
+      email: authUser.email,
+      name: accountUser.name,
+      accountUser: accountUser // Incluindo os dados da tabela account_user
     });
     
   } catch (error) {
