@@ -15,9 +15,20 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
   res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization');
 
-  // Lidar com preflight requests
+  // Lidar com preflight requests de maneira mais explícita
   if (req.method === 'OPTIONS') {
     console.log('Respondendo a preflight request com 200 OK');
+    // Métodos permitidos explicitamente para cada endpoint
+    if (req.url.includes('/cartas/registrar-leitura')) {
+      res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    } else if (req.url.includes('/subscribe') || req.url.includes('/dashboard-subscribe')) {
+      res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    } else if (req.url.includes('/cartas') && !req.url.includes('/registrar-leitura')) {
+      res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    } else {
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    }
+    
     return res.status(200).end();
   }
 
@@ -37,9 +48,16 @@ export default async function handler(req, res) {
 
   // Configurar cliente Supabase (com validação aprimorada)
   const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+  // Usar a chave de serviço em vez da chave anônima para operações de API backend
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+  
+  // Escolha a chave apropriada (preferencialmente a chave de serviço)
+  const supabaseKey = supabaseServiceKey || supabaseAnonKey;
 
-  console.log(`Configurando Supabase com URL: ${supabaseUrl ? 'disponível' : 'não disponível'}, KEY: ${supabaseKey ? 'disponível' : 'não disponível'}`);
+  console.log(`Configurando Supabase com URL: ${supabaseUrl ? 'disponível' : 'não disponível'}, 
+              ROLE KEY: ${supabaseServiceKey ? 'disponível' : 'não disponível'},
+              ANON KEY: ${supabaseAnonKey ? 'disponível' : 'não disponível'}`);
   
   if (!supabaseUrl || !supabaseKey) {
     console.error('Configuração do Supabase não encontrada no ambiente');
@@ -49,7 +67,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Inicializar cliente Supabase
+    // Inicializar cliente Supabase com SERVICE ROLE (bypass RLS)
     const supabase = createClient(supabaseUrl, supabaseKey);
     
     // Rota para status da API

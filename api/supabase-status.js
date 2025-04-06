@@ -14,16 +14,21 @@ export default async function handler(req, res) {
   }
   
   // Verificar se temos as variáveis de ambiente do Supabase
-  const supabaseUrl = process.env.VITE_SUPABASE_URL;
-  const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+  
+  // Usar preferencialmente a service key
+  const supabaseKey = supabaseServiceKey || supabaseAnonKey;
   
   if (!supabaseUrl || !supabaseKey) {
     return res.status(500).json({
       status: 'error',
       message: 'Variáveis de ambiente do Supabase não encontradas',
       details: {
-        VITE_SUPABASE_URL: supabaseUrl ? 'configurado' : 'não configurado',
-        VITE_SUPABASE_ANON_KEY: supabaseKey ? 'configurado' : 'não configurado',
+        SUPABASE_URL: supabaseUrl ? 'configurado' : 'não configurado',
+        SUPABASE_SERVICE_ROLE_KEY: supabaseServiceKey ? 'configurado' : 'não configurado',
+        SUPABASE_ANON_KEY: supabaseAnonKey ? 'configurado' : 'não configurado',
       }
     });
   }
