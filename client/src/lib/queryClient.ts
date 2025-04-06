@@ -1,5 +1,24 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
+// Verifica se estamos em ambiente de produção (Vercel)
+export const isProduction = process.env.NODE_ENV === "production" || 
+                         import.meta.env.PROD || 
+                         window.location.hostname.includes("replit.app") ||
+                         window.location.hostname.includes("vercel.app");
+
+console.log("Ambiente de execução:", isProduction ? "produção" : "desenvolvimento");
+
+// Helper para normalizar URLs da API com base no ambiente
+export function normalizeApiUrl(url: string): string {
+  // Para URLs que começam com /api/auth/ em produção, precisamos
+  // remover o prefixo /api para mapear corretamente para as funções serverless do Vercel
+  if (isProduction && url.startsWith('/api/auth/')) {
+    console.log(`Normalizando URL da API para produção: ${url} -> ${url.replace('/api/', '/')}`);
+    return url.replace('/api/', '/');
+  }
+  return url;
+}
+
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
@@ -12,7 +31,12 @@ export async function apiRequest<T = any>(
   url: string,
   data?: unknown | undefined,
 ): Promise<T> {
-  const res = await fetch(url, {
+  // Normaliza a URL com base no ambiente
+  const normalizedUrl = normalizeApiUrl(url);
+  
+  console.log(`Fazendo requisição ${method} para: ${normalizedUrl}`);
+  
+  const res = await fetch(normalizedUrl, {
     method,
     headers: data ? { "Content-Type": "application/json" } : {},
     body: data ? JSON.stringify(data) : undefined,
@@ -29,7 +53,11 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey[0] as string, {
+    // Normaliza a URL da query com base no ambiente
+    const url = normalizeApiUrl(queryKey[0] as string);
+    console.log(`Executando query para: ${url}`);
+    
+    const res = await fetch(url, {
       credentials: "include",
     });
 
