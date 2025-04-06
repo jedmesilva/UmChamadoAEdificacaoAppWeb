@@ -1,5 +1,27 @@
-import { createClient } from '@supabase/supabase-js';
-import { NextResponse } from 'next/server';
+// Suporte tanto para ESM quanto CommonJS
+
+// Importações ESM (com fallback para CommonJS)
+let createClient;
+try {
+  // Tentativa de importação ESM
+  createClient = (await import('@supabase/supabase-js')).createClient;
+} catch (err) {
+  try {
+    // Fallback para CommonJS
+    createClient = require('@supabase/supabase-js').createClient;
+  } catch (commonjsErr) {
+    console.error('Erro ao importar supabase-js:', err, commonjsErr);
+    // Stub para não quebrar a aplicação
+    createClient = (url, key) => ({
+      from: () => ({ 
+        select: () => ({ data: null, error: null })
+      })
+    });
+  }
+}
+
+// Next.js não é necessário para este handler em Vercel Serverless
+// import { NextResponse } from 'next/server';
 
 /**
  * Handler para verificar o status da inscrição de um usuário
@@ -24,8 +46,12 @@ export default async function handler(req, res) {
   }
   
   // Configuração do Supabase
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+  
+  // Escolha a chave apropriada (preferencialmente a chave de serviço)
+  const supabaseKey = supabaseServiceKey || supabaseAnonKey;
   
   // Verificação de configurações
   if (!supabaseUrl || !supabaseKey) {

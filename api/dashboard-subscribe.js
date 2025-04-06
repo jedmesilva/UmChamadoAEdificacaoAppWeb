@@ -1,5 +1,27 @@
 // Endpoint específico para inscrição a partir do dashboard
-import { createClient } from '@supabase/supabase-js';
+// Suporte tanto para ESM quanto CommonJS
+
+// Importações ESM (com fallback para CommonJS)
+let createClient;
+try {
+  // Tentativa de importação ESM
+  createClient = (await import('@supabase/supabase-js')).createClient;
+} catch (err) {
+  try {
+    // Fallback para CommonJS
+    createClient = require('@supabase/supabase-js').createClient;
+  } catch (commonjsErr) {
+    console.error('Erro ao importar supabase-js:', err, commonjsErr);
+    // Stub para não quebrar a aplicação
+    createClient = (url, key) => ({
+      from: () => ({ 
+        select: () => ({ data: null, error: { message: 'Falha na inicialização do Supabase' } }),
+        insert: () => ({ select: () => ({ data: null, error: { message: 'Falha na inicialização do Supabase' } }) }),
+        update: () => ({ select: () => ({ data: null, error: { message: 'Falha na inicialização do Supabase' } }) })
+      })
+    });
+  }
+}
 
 /**
  * Handler específico para endpoint de inscrição a partir do dashboard

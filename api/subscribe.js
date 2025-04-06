@@ -1,5 +1,31 @@
 // Endpoint de inscrição dedicado para Vercel Serverless
-import { createClient } from '@supabase/supabase-js';
+// Suporte tanto para ESM quanto CommonJS
+
+// Importações ESM (com fallback para CommonJS)
+let createClient;
+try {
+  // Tentativa de importação ESM
+  createClient = (await import('@supabase/supabase-js')).createClient;
+} catch (err) {
+  try {
+    // Fallback para CommonJS
+    createClient = require('@supabase/supabase-js').createClient;
+  } catch (commonjsErr) {
+    console.error('Erro ao importar supabase-js:', err, commonjsErr);
+    // Stub para não quebrar a aplicação
+    createClient = (url, key) => ({
+      auth: { 
+        admin: { 
+          getUserByEmail: () => ({ data: null, error: null }) 
+        } 
+      },
+      from: () => ({ 
+        select: () => ({ data: null, error: null }),
+        insert: () => ({ select: () => ({ data: null, error: null }) })
+      })
+    });
+  }
+}
 
 /**
  * Handler específico para endpoint de inscrição

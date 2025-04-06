@@ -1,7 +1,24 @@
 // API principal para Vercel Serverless
-// Este arquivo usa a sintaxe ESM devido ao "type": "module" no package.json
+// Suporte tanto para ESM quanto CommonJS
 
-import { createClient } from '@supabase/supabase-js';
+// Importações ESM (com fallback para CommonJS)
+let createClient;
+try {
+  // Tentativa de importação ESM
+  createClient = (await import('@supabase/supabase-js')).createClient;
+} catch (err) {
+  try {
+    // Fallback para CommonJS
+    createClient = require('@supabase/supabase-js').createClient;
+  } catch (commonjsErr) {
+    console.error('Erro ao importar supabase-js:', err, commonjsErr);
+    // Stub para não quebrar a aplicação
+    createClient = (url, key) => ({
+      auth: { signUp: () => ({ error: { message: 'Falha na inicialização do Supabase' } }) },
+      from: () => ({ select: () => ({ data: null, error: { message: 'Falha na inicialização do Supabase' } }) })
+    });
+  }
+}
 
 /**
  * Handler principal para funções serverless da API no Vercel
@@ -183,7 +200,8 @@ export default async function handler(req, res) {
         .insert({
           carta_id: carta.id,
           account_user_id: userId,
-          status: 'lido'
+          status: 'lido',
+          created_at: new Date().toISOString() // Campo obrigatório para timestamp
         });
       
       if (leituraError) {
@@ -242,7 +260,9 @@ export default async function handler(req, res) {
         const { error: createError } = await supabase
           .from('subscription_um_chamado')
           .insert({
-            email_subscription: email
+            email_subscription: email,
+            created_at: new Date().toISOString(), // Campo obrigatório
+            status_subscription: 'is_subscription_um_chamado'
           });
         
         if (createError) {
@@ -298,7 +318,9 @@ export default async function handler(req, res) {
       const { data: subscription, error: createError } = await supabase
         .from('subscription_um_chamado')
         .insert({
-          email_subscription: email
+          email_subscription: email,
+          created_at: new Date().toISOString(), // Campo obrigatório
+          status_subscription: 'is_subscription_um_chamado'
         })
         .select()
         .single();

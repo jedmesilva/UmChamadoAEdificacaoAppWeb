@@ -1,6 +1,27 @@
 // API de registro de usuários para Vercel Serverless
-import { createClient } from '@supabase/supabase-js';
-import { v4 as uuidv4 } from 'uuid';
+// Suporte tanto para ESM quanto CommonJS
+
+// Importações ESM (com fallback para CommonJS)
+let createClient, uuidv4;
+try {
+  // Tentativa de importação ESM
+  createClient = (await import('@supabase/supabase-js')).createClient;
+  uuidv4 = (await import('uuid')).v4;
+} catch (err) {
+  try {
+    // Fallback para CommonJS
+    createClient = require('@supabase/supabase-js').createClient;
+    uuidv4 = require('uuid').v4;
+  } catch (commonjsErr) {
+    console.error('Erro ao importar módulos:', err, commonjsErr);
+    // Stubs para não quebrar a aplicação
+    createClient = (url, key) => ({
+      auth: { admin: { createUser: () => ({ error: { message: 'Falha ao carregar supabase-js' } }) } },
+      from: () => ({ select: () => ({ error: { message: 'Falha ao carregar supabase-js' } }) })
+    });
+    uuidv4 = () => 'fallback-uuid';
+  }
+}
 
 export default async function handler(req, res) {
   // Configuração CORS
@@ -136,6 +157,7 @@ export default async function handler(req, res) {
           user_id: authUser.id,
           name,
           status: 'active',
+          created_at: new Date().toISOString(), // Campo obrigatório
         })
         .eq('email', email)
         .select()
@@ -160,6 +182,7 @@ export default async function handler(req, res) {
           name,
           email,
           status: 'active',
+          created_at: new Date().toISOString(), // Campo obrigatório
         })
         .select()
         .single();
