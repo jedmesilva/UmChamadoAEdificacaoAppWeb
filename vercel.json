@@ -22,5 +22,22 @@
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }
+  ],
+  "routes": [
+    { 
+      "src": "/api/healthcheck", 
+      "dest": "/api/healthcheck.js",
+      "methods": ["GET", "OPTIONS"]
+    },
+    { 
+      "src": "/api/supabase-status", 
+      "dest": "/api/supabase-status.js",
+      "methods": ["GET", "OPTIONS"]
+    },
+    { 
+      "src": "/api/(.*)", 
+      "dest": "/api/index.js",
+      "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    }
   ]
 }

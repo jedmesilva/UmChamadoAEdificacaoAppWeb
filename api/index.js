@@ -15,9 +15,20 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
   res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization');
 
-  // Lidar com preflight requests
+  // Lidar com preflight requests de maneira mais explícita
   if (req.method === 'OPTIONS') {
     console.log('Respondendo a preflight request com 200 OK');
+    // Métodos permitidos explicitamente para cada endpoint
+    if (req.url.includes('/cartas/registrar-leitura')) {
+      res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    } else if (req.url.includes('/subscribe') || req.url.includes('/dashboard-subscribe')) {
+      res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    } else if (req.url.includes('/cartas') && !req.url.includes('/registrar-leitura')) {
+      res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    } else {
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    }
+    
     return res.status(200).end();
   }
 
