@@ -249,17 +249,21 @@ export const subscriptionService = {
         return existingSubscription;
       }
       
-      // Preparar o objeto de inserção com timestamp atual
-      // Não precisamos definir o timestamp pois o Supabase cuidará disso automaticamente
-      // pela configuração padrão da coluna created_at como tipo timestamptz
+      // Precisamos definir o timestamp explicitamente
+      // pois a coluna created_at está configurada como NOT NULL
+      // e não parece ter um valor default configurado
       
       try {
-        // Usar o cliente normal (não admin) para inserção, pode ajudar a evitar problemas de permissão
+        // Preparar o objeto de inserção com timestamp atual
+        const now = new Date().toISOString();
+        
+        // Usar o cliente normal (não admin) para inserção
         const { data, error } = await supabaseClient
           .from('subscription_um_chamado')
           .insert({
             email_subscription: email,
-            status_subscription: 'is_subscription_um_chamado'
+            status_subscription: 'is_subscription_um_chamado',
+            created_at: now // Adicionando explicitamente a data de criação
           })
           .select()
           .single();
@@ -273,7 +277,8 @@ export const subscriptionService = {
             .from('subscription_um_chamado')
             .insert({
               email_subscription: email,
-              status_subscription: 'is_subscription_um_chamado'
+              status_subscription: 'is_subscription_um_chamado',
+              created_at: now // Adicionando explicitamente a data de criação
             })
             .select()
             .single();
