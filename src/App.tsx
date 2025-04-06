@@ -7,7 +7,7 @@ import HomePage from "@/pages/home-page";
 import AuthPage from "@/pages/auth-page";
 import LandingPage from "@/pages/landing-page";
 import LetterPage from "@/pages/letter-page";
-import { ProtectedRoute } from "./lib/protected-route";
+import { ProtectedRoute } from "@/lib/protected-route";
 import { SupabaseAuthProvider } from "./hooks/use-supabase-auth";
 
 function Router() {
